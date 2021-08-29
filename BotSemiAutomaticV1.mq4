@@ -737,7 +737,7 @@ void useHedge(string sym)
          if(checkOrder >= 0 || i > 5) {
             break;
          }
-         Alert(checkOrder);
+         Alert("Error: " + GetLastError());
          Sleep(50);
          i++;
       }

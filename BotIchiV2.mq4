@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2021, MetaQuotes Software Corp."
 #property link      "https://www.mql5.com"
-#property version   "2.10"
+#property version   "2.20"
 #property strict
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -23,8 +23,8 @@ datetime tradeTime;
 bool allowTrade = true;
 int magic = 992; //v2.1 change 992 
 extern ENUM_TIMEFRAMES timeframe = PERIOD_M5;
-extern double risk = 2; // risk (2%)
-extern double reward = 4; // reward (4%)
+extern double risk = 1; // risk (1%)
+extern double reward = 2; // reward (2%)
 extern double breakEven = 99999;
 extern int minSLPoints = 50;
 extern int maxSLPoints = 150;
@@ -44,7 +44,7 @@ string globalRandom = "_jkfp72iu40_BotIchiV2"; //v2.1 add
 int OnInit()
   {
      
-   resetGlobal();
+   //resetGlobal();
 //---
    
 //---
@@ -623,11 +623,18 @@ void closeTradingByProfit(string sym)
    double rewardAmount = AccountBalance() / 100 * reward; 
    //Alert("getCountCurrentLossTrade: " + getCountCurrentLossTrade());
    //Alert("rewardAmount: " + rewardAmount * 10);
+   
+   /*
+   double hightPrice = iHigh(sym, timeframe, 1);
+   double lowPrice = iLow(sym, timeframe, 1);   
+   hightPrice = NormalizeDouble(hightPrice, MarketInfo(sym, MODE_DIGITS));
+   lowPrice = NormalizeDouble(lowPrice, MarketInfo(sym, MODE_DIGITS));
+   */
      
    if(
    AccountProfit() + getCurrentLossTrade() >= rewardAmount && getCountCurrentLossTrade() < 1
    || AccountProfit() + getCurrentLossTrade() >= 0 && getCountCurrentLossTrade() >= 1
-   //|| AccountProfit() + getCurrentLossTrade() >= 0 && getCountCurrentLossTrade() >= 2
+   //|| hightPrice >= getBuyStop() && lowPrice <= getSellStop()
    ) {
       for(int i = OrdersTotal() - 1; i >= 0; i--) {
          if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES) && OrderMagicNumber() == magic) {
@@ -704,6 +711,14 @@ int checkCandle(string sym)
       return (tradeType);
    }
    */
+   if(closePrice >= 1.37756 && closePrice <= 1.37796 // between 1.37777
+   || closePrice >= 1.38980 && closePrice <= 1.39020 // between 1.39000
+   // || closePrice >= 1.38969 && closePrice <= 1.39009 // between 1.38989
+   ) { 
+      return false;
+   }
+   
+   
    if(
       closePrice > openPrice // nen tang
       && MathAbs(hightPrice - closePrice) < MathAbs(closePrice - openPrice) // rau nen ngan hon than nen
@@ -719,8 +734,8 @@ int checkCandle(string sym)
    ) {
       tradeType = OP_SELL;
    }
-   Alert(MathAbs(closePrice - lowPrice) + " < " + MathAbs(openPrice - closePrice));
-   Alert(MathAbs(openPrice2 - closePrice2) + " < " + MathAbs(openPrice - closePrice));
+   // Alert(MathAbs(closePrice - lowPrice) + " < " + MathAbs(openPrice - closePrice));
+   // Alert(MathAbs(openPrice2 - closePrice2) + " < " + MathAbs(openPrice - closePrice));
    
    return (tradeType);
 }

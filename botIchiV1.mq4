@@ -636,9 +636,12 @@ void closeTradingByProfit(string sym)
          }
       }
       
+      /*
       setCurrentLossTrade(0);
       setCountCurrentLossTrade(0);
       setCheckHedging(false);
+      */
+      resetGlobal();
    }
 }
 
@@ -662,8 +665,11 @@ void closeTradingByTradeType(string sym, int tradeType)
    }
    
    if(getCurrentLossTrade() > 0) {
+      resetGlobal();
+      /*
       setCurrentLossTrade(0);
       setCountCurrentLossTrade(0);
+      */
    }
 }
 

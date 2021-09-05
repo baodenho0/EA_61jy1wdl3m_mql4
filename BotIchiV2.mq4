@@ -23,8 +23,8 @@ datetime tradeTime;
 bool allowTrade = true;
 int magic = 992; //v2.1 change 992 
 extern ENUM_TIMEFRAMES timeframe = PERIOD_M5;
-extern double risk = 1; // risk (1%)
-extern double reward = 2; // reward (2%)
+extern double risk = 0.9; // risk (0.9%)
+extern double reward = 2.6; // reward (2.6%)
 extern double breakEven = 99999;
 extern int minSLPoints = 50;
 extern int maxSLPoints = 150;
@@ -130,6 +130,21 @@ void OnTick()
    
    checkBreakEven(sym);
    closeTradingByProfit(sym);
+   
+   /*
+   if(useAvgPrice(sym)) {
+         return;
+   }
+   */
+   /*   
+   if(getAllowUseAvgPrice()) {
+      if(useAvgPrice(sym)) {
+         return;
+      }
+   } else {
+      checkAllowUseAvgPrice(sym);
+   }*/  
+   
    useHedge(sym);
    
    if(tradeTime == iTime(sym, timeframe, 0) || OrdersTotal() > 0) {
@@ -218,6 +233,7 @@ void runTrading(string sym, int tradeType, double lot = 0)
          setSellStop(entry);
          setNextTradeStop(OP_BUYSTOP);
       }
+      setFirstTradeType(tradeType);
    }
 }
 
@@ -519,7 +535,7 @@ bool checkOverThresholdByIchimoku(string sym)
 {
    bool status = true;
    
-   for(int i = -25; i <= 75; i++) {
+   for(int i = 1; i <= 75; i++) {
       double senKouSpanA = iIchimoku(sym, timeframe, 9, 26, 52, MODE_SENKOUSPANA, i);
       double senKouSpanB = iIchimoku(sym, timeframe, 9, 26, 52, MODE_SENKOUSPANB, i);   
       senKouSpanA = NormalizeDouble(senKouSpanA, MarketInfo(sym, MODE_DIGITS));
@@ -634,7 +650,8 @@ void closeTradingByProfit(string sym)
    if(
    AccountProfit() + getCurrentLossTrade() >= rewardAmount && getCountCurrentLossTrade() < 1
    || AccountProfit() + getCurrentLossTrade() >= 0 && getCountCurrentLossTrade() >= 1
-   //|| hightPrice >= getBuyStop() && lowPrice <= getSellStop()
+   || AccountProfit() + getCurrentLossTrade() + rewardAmount >= 0 && getCountCurrentLossTrade() >= 8
+   
    ) {
       for(int i = OrdersTotal() - 1; i >= 0; i--) {
          if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES) && OrderMagicNumber() == magic) {
@@ -650,8 +667,9 @@ void closeTradingByProfit(string sym)
          }
       }
       
-      setCurrentLossTrade(0);
-      setCountCurrentLossTrade(0);
+      resetGlobal();
+      // setCurrentLossTrade(0);
+      // setCountCurrentLossTrade(0);
    }
 }
 
@@ -665,6 +683,8 @@ void closeTradingByTradeType(string sym, int tradeType)
             closeType = MODE_BID;
          } else if(OrderType() == OP_SELL) {
             closeType = MODE_ASK;
+         } else if(OrderType() == OP_SELLSTOP || OrderType() == OP_BUYSTOP) {
+            OrderDelete(OrderTicket());
          }
          
          setCurrentLossTrade(getCurrentLossTrade() + OrderProfit());
@@ -743,8 +763,10 @@ int checkCandle(string sym)
 void commentReport()
 {
    Comment(
-   "accountProfit: " + AccountProfit() + "(" + OrdersTotal() + ")" + "\n"
-   "currentLossTrade: " + getCurrentLossTrade() + "(" + getCountCurrentLossTrade() + ")" + "\n"
+   "accountProfit: " + AccountProfit() + "(" + OrdersTotal() + ")" + "\n" +
+   "currentLossTrade: " + getCurrentLossTrade() + "(" + getCountCurrentLossTrade() + ")" + "\n" +
+   "checkUseAvgPrice: " + getCheckUseAvgPrice() + "\n" +
+   "getAllowUseAvgPrice: " + getAllowUseAvgPrice() + "\n"
    );
    
 }
@@ -777,7 +799,7 @@ void useHedge(string sym)
          }        
       }
    }
-   
+
    if(lastEntry && lastLot > 0 && lastTradeType >= 0 && allowStop == true) {
       if(lastTradeType == OP_BUY) {
          hedgeEntry = getSellStop();
@@ -788,11 +810,11 @@ void useHedge(string sym)
          hedgeType = OP_BUYSTOP;
          closeType = OP_BUY;
       }
-      
+      Alert(hedgeType + getNextTradeStop());
       if(hedgeType != getNextTradeStop()) {
          return;
       }
-      
+
       double hedgeLot = lastLot * 1.5;
       if(lastLot == 0.01) {
          hedgeLot = 0.02;
@@ -871,6 +893,36 @@ void setNextTradeStop(int value = -1)
    GlobalVariableSet("nextTradeStop" + globalRandom, value);
 }
 
+int getFirstTradeType()
+{
+   return GlobalVariableGet("firstTradeType" + globalRandom);
+}
+
+void setFirstTradeType(int value = -1)
+{
+   GlobalVariableSet("firstTradeType" + globalRandom, value);
+}
+
+bool getCheckUseAvgPrice()
+{
+   return GlobalVariableGet("checkUseAvgPrice" + globalRandom);
+}
+
+void setCheckUseAvgPrice(bool value = false)
+{
+   GlobalVariableSet("checkUseAvgPrice" + globalRandom, value);
+}
+
+bool getAllowUseAvgPrice()
+{
+   return GlobalVariableGet("allowUseAvgPrice" + globalRandom);
+}
+
+void setAllowUseAvgPrice(bool value = false)
+{
+   GlobalVariableSet("allowUseAvgPrice" + globalRandom, value);
+}
+
 void resetGlobal()
 {
    setCurrentLossTrade();
@@ -878,6 +930,9 @@ void resetGlobal()
    setBuyStop();
    setSellStop();
    setNextTradeStop();
+   setFirstTradeType();
+   setCheckUseAvgPrice();
+   setAllowUseAvgPrice();
    
    Alert("resetGlobal()");
 }
@@ -905,5 +960,71 @@ void OnChartEvent(const int id,
       if(sparam == "resetGlobalBtn") {
          resetGlobal();
       }      
+   }
+}
+
+bool useAvgPrice(string sym)
+{
+   if(getCountCurrentLossTrade() < 6 /*&& (getNextTradeStop() - 4) != getFirstTradeType()*/) {
+      return false;
+   }
+   
+   if(getCheckUseAvgPrice()) {
+      return true;
+   }
+   
+   int nextTradeType = -1;
+   double currentPrice;
+   double avgPrice = -1;      
+   int closeType = -1;
+   
+   if(getFirstTradeType() == OP_BUY) {
+      currentPrice = MarketInfo(sym, MODE_ASK);
+      avgPrice = getSellStop();
+      closeType = OP_SELLSTOP;
+      nextTradeType = OP_BUYLIMIT;
+   } else if(getFirstTradeType() == OP_SELL) {
+      currentPrice = MarketInfo(sym, MODE_BID);
+      avgPrice = getBuyStop();
+      closeType = OP_BUYSTOP;
+      nextTradeType = OP_SELLLIMIT;
+   }
+   
+   if((currentPrice > avgPrice && nextTradeType == OP_SELLLIMIT)
+   || (currentPrice < avgPrice && nextTradeType == OP_BUYLIMIT)
+   ) {
+      nextTradeType = nextTradeType + 2;
+   }
+   
+   double lastLot = getLastTrading(sym) * 1.5;      
+   int check = OrderSend(sym, nextTradeType, lastLot, avgPrice, 20, 0, 0, comment, magic, 0);
+   
+   if(check >=0) {
+      closeTradingByTradeType(sym, closeType);
+      closeTradingByTradeType(sym, (closeType - 4));
+      setCheckUseAvgPrice(true);
+   
+      return true;
+   }
+   
+   return false;
+}
+
+void checkAllowUseAvgPrice(string sym)
+{
+   double hightPrice1 = iHigh(sym, timeframe, 1) + MarketInfo(sym, MODE_SPREAD) * MarketInfo(sym, MODE_POINT);
+   double lowPrice1 = iLow(sym, timeframe, 1);
+   double hightPrice2 = iHigh(sym, timeframe, 2) + MarketInfo(sym, MODE_SPREAD) * MarketInfo(sym, MODE_POINT);
+   double lowPrice2 = iLow(sym, timeframe, 2);
+   
+   hightPrice1 = NormalizeDouble(hightPrice1, MarketInfo(sym, MODE_DIGITS));
+   lowPrice1 = NormalizeDouble(lowPrice1, MarketInfo(sym, MODE_DIGITS));
+   hightPrice2 = NormalizeDouble(hightPrice2, MarketInfo(sym, MODE_DIGITS));
+   lowPrice2 = NormalizeDouble(lowPrice2, MarketInfo(sym, MODE_DIGITS));
+   
+   if((getBuyStop() < hightPrice1 || getBuyStop() < hightPrice2)
+   && (getSellStop() > lowPrice1 || getSellStop() > lowPrice2)
+   ) {
+      setAllowUseAvgPrice(true);
    }
 }

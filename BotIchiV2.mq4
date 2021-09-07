@@ -24,7 +24,7 @@ bool allowTrade = true;
 int magic = 992; //v2.1 change 992 
 extern ENUM_TIMEFRAMES timeframe = PERIOD_M5;
 extern double risk = 0.9; // risk (0.9%)
-extern double reward = 2.6; // reward (2.6%)
+extern double reward = 3.2; // reward (3.2%)
 extern double breakEven = 99999;
 extern int minSLPoints = 50;
 extern int maxSLPoints = 150;
@@ -649,7 +649,7 @@ void closeTradingByProfit(string sym)
    */
      
    if(
-   AccountProfit() + getCurrentLossTrade() >= rewardAmount && getCountCurrentLossTrade() < 1
+   AccountProfit() + getCurrentLossTrade() >= rewardAmount /*&& getCountCurrentLossTrade() < 1*/
    || AccountProfit() + getCurrentLossTrade() >= 0 && getCountCurrentLossTrade() >= 1
    || AccountProfit() + getCurrentLossTrade() + rewardAmount >= 0 && getCountCurrentLossTrade() >= 8
    

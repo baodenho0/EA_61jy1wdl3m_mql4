@@ -45,7 +45,9 @@ string globalRandom = "_u6hxhs7f2p_BotIchiV1"; //v1.1 add
 int OnInit()
   {
      
-   //resetGlobal();
+   if(IsTesting()) {
+      resetGlobal();
+   }
 //---
    
 //---

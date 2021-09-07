@@ -476,13 +476,13 @@ int checkIchimokuAndCandle(string sym)
       if(senKouSpanA < senKouSpanB
          && (senKouSpanA < hightPrice
          || (senKouSpanA >= hightPrice
-         && (NormalizeDouble(senKouSpanA - hightPrice, MarketInfo(sym, MODE_DIGITS)) / MarketInfo(sym, MODE_POINT)) <= 20))
+         && (NormalizeDouble(senKouSpanA - hightPrice, MarketInfo(sym, MODE_DIGITS)) / MarketInfo(sym, MODE_POINT)) <= 15))
       ) {
          tradeType = OP_SELL;
       } else if(senKouSpanB < senKouSpanA
          && (senKouSpanB < hightPrice
          || (senKouSpanB >= hightPrice
-         && (NormalizeDouble(senKouSpanB - hightPrice, MarketInfo(sym, MODE_DIGITS)) / MarketInfo(sym, MODE_POINT)) <= 20))
+         && (NormalizeDouble(senKouSpanB - hightPrice, MarketInfo(sym, MODE_DIGITS)) / MarketInfo(sym, MODE_POINT)) <= 15))
       ) {
          tradeType = OP_SELL;
       }  
@@ -536,7 +536,7 @@ bool checkOverThresholdByIchimoku(string sym)
 {
    bool status = true;
    
-   for(int i = 1; i <= 75; i++) {
+   for(int i = 1; i <= 36; i++) {
       double senKouSpanA = iIchimoku(sym, timeframe, 9, 26, 52, MODE_SENKOUSPANA, i);
       double senKouSpanB = iIchimoku(sym, timeframe, 9, 26, 52, MODE_SENKOUSPANB, i);   
       senKouSpanA = NormalizeDouble(senKouSpanA, MarketInfo(sym, MODE_DIGITS));

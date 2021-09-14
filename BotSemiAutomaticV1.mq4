@@ -21,7 +21,7 @@ extern double reward = 3; // reward (4%)
 extern double breakEven = 99999;
 extern int minSLPoints = 50;
 extern int maxSLPoints = 150;
-extern double maxSpreadPoints = 15;
+extern double maxSpreadPoints = 30;
 //extern bool combineMartingale = true;
 string ASCTrendName = "ASCTrend1i-Alert";
 //double currentLossTrade = 0; //v1.1 change global 
@@ -552,9 +552,8 @@ void closeTradingByProfit(string sym)
    double rewardAmount = AccountBalance() / 100 * reward;
      
    if(
-   AccountProfit() + getCurrentLossTrade() >= rewardAmount && getCountCurrentLossTrade() < 1
-   || AccountProfit() + getCurrentLossTrade() >= rewardAmount / 2 && getCountCurrentLossTrade() >= 1
-   || AccountProfit() + getCurrentLossTrade() >= 0 && getCountCurrentLossTrade() >= 2
+   AccountProfit() + getCurrentLossTrade() >= rewardAmount
+   || AccountProfit() + getCurrentLossTrade() >= 0 && getCountCurrentLossTrade() >= 3
    ) {
       for(int i = OrdersTotal() - 1; i >= 0; i--) {
          if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES) && OrderMagicNumber() == magic) {

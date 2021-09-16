@@ -568,9 +568,11 @@ void closeTradingByProfit(string sym)
             OrderClose(OrderTicket() , OrderLots(), MarketInfo(sym, closeType), 5);            
          }
       }
-      
+      /*
       setCurrentLossTrade(0);
       setCountCurrentLossTrade(0);
+      */
+      resetGlobal();
       Alert("closeTradingByProfit");
    }
 }
@@ -616,9 +618,11 @@ void closeAll(string sym)
            OrderClose(OrderTicket() , OrderLots(), MarketInfo(sym, closeType), 5);            
        }
     }  
-   
+   /*
    setCurrentLossTrade(0);
    setCountCurrentLossTrade(0);
+   */
+   resetGlobal();
 }
 
 int checkCandle(string sym)

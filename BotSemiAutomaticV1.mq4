@@ -736,7 +736,7 @@ void useHedge(string sym)
       
       int i = 0;
       while(true) {
-         int checkOrder = OrderSend(sym, hedgeType, hedgeLot, hedgeEntry, 20, 0, 0, comment, magic, 0);
+         int checkOrder = OrderSend(sym, hedgeType, hedgeLot, hedgeEntry, 3, 0, 0, comment, magic, 0);
          if(checkOrder >= 0 || i > 5) {
             break;
          }

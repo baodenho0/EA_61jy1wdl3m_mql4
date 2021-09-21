@@ -738,11 +738,11 @@ void useHedge(string sym)
       int i = 0;
       while(true) {
          int checkOrder = OrderSend(sym, hedgeType, hedgeLot, hedgeEntry, 3, 0, 0, comment, magic, 0);
-         if(checkOrder >= 0 || i > 5) {
+         if(checkOrder >= 0) {
             break;
          }
          Alert("Error: " + GetLastError());
-         Sleep(50);
+         Sleep(90);
          i++;
       }
       

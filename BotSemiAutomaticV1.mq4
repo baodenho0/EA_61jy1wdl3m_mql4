@@ -180,7 +180,6 @@ void runTrading(string sym, int tradeType, double lot = 0)
    
    if(lot == 0) {
       lot = getLot(sym, SLPoints);
-      Alert("lot: " + lot);
    }
    
    if(entry && SL && TP) {
@@ -238,7 +237,9 @@ double getLot(string sym, double SLPoints)
     if (lotSize > MarketInfo(sym, MODE_MAXLOT)) {
       lotSize = MarketInfo(sym, MODE_MAXLOT);   
     }            
-
+    
+    Alert("balance: " + balance + " | amountRisk: " + amountRisk + " | lotSize: " + lotSize + " | SLPoints: " + SLPoints);  
+      
     return(lotSize);
 }
 

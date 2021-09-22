@@ -16,8 +16,8 @@ datetime tradeTime;
 bool allowTrade = true;
 int magic = 12444;
 ENUM_TIMEFRAMES timeframe = 0;
-extern double risk = 1; // risk (2%)
-extern double reward = 3; // reward (4%)
+extern double risk = 1; // risk (1%)
+extern double reward = 3; // reward (3%)
 extern double breakEven = 99999;
 extern int minSLPoints = 50;
 extern int maxSLPoints = 150;
@@ -33,6 +33,7 @@ bool checkHedging = false;
 //int nextTradeStop = -1; //v1.1 change global 
 string SupDem = "SupDem";
 string globalRandom = "_j7a2zwqfp4_BotSemiAutoV1"; //v1.1 add
+extern bool drawTPLine = true;
 
 int OnInit()
   {
@@ -125,7 +126,7 @@ void OnTick()
    int tradeType = -1;
    // commentReport();
    drawButton(sym);  
-   
+   checkDrawTPLine(sym);
    checkBreakEven(sym);
    closeTradingByProfit(sym);
    useHedge(sym);
@@ -902,6 +903,44 @@ void resetGlobal()
    setBuyStop();
    setSellStop();
    setNextTradeStop();
+   removeDrawTPLine();
    
    Alert("resetGlobal()");
 }
+
+void checkDrawTPLine(string sym)
+{
+   if(drawTPLine && getNextTradeStop() >= 0) {
+      double distance = (getBuyStop() - getSellStop()) / MarketInfo(sym, MODE_POINT);
+      double tp1 = distance * 1.5;
+      double tp2 = distance * reward;
+   
+      ObjectCreate("TPLine0", OBJ_HLINE , 0,Time[0], getBuyStop() + tp1 * MarketInfo(sym, MODE_POINT));
+      ObjectSet("TPLine0", OBJPROP_STYLE, STYLE_DASH);
+      ObjectSet("TPLine0", OBJPROP_COLOR, Magenta);
+      ObjectSet("TPLine0", OBJPROP_WIDTH, 0);
+      
+      ObjectCreate("TPLine1", OBJ_HLINE , 0,Time[0], getSellStop() - tp1 * MarketInfo(sym, MODE_POINT));
+      ObjectSet("TPLine1", OBJPROP_STYLE, STYLE_DASH);
+      ObjectSet("TPLine1", OBJPROP_COLOR, Magenta);
+      ObjectSet("TPLine1", OBJPROP_WIDTH, 0);
+      
+      ObjectCreate("TPLine2", OBJ_HLINE , 0,Time[0], getBuyStop() + tp2 * MarketInfo(sym, MODE_POINT));
+      ObjectSet("TPLine2", OBJPROP_STYLE, STYLE_SOLID);
+      ObjectSet("TPLine2", OBJPROP_COLOR, Magenta);
+      ObjectSet("TPLine2", OBJPROP_WIDTH, 0);
+      
+      ObjectCreate("TPLine3", OBJ_HLINE , 0,Time[0], getSellStop() - tp2 * MarketInfo(sym, MODE_POINT));
+      ObjectSet("TPLine3", OBJPROP_STYLE, STYLE_SOLID);
+      ObjectSet("TPLine3", OBJPROP_COLOR, Magenta);
+      ObjectSet("TPLine3", OBJPROP_WIDTH, 0);
+   }
+}
+
+void removeDrawTPLine()
+{
+   for(int i = 0; i <= 3; i++) {
+      ObjectDelete("TPLine" + i);
+   }
+}
+

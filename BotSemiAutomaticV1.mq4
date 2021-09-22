@@ -117,6 +117,10 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
   {
+  if(AccountBalance() <= 0) {
+   return;
+  }
+  
    string sym = Symbol();
    int tradeType = -1;
    // commentReport();

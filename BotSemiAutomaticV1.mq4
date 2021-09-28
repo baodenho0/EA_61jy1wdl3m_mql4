@@ -825,7 +825,6 @@ void OnChartEvent(const int id,
          runTrading(sym, OP_SELL);
       } else if (sparam == "CloseAllBtn") {
          closeAll(sym);
-         resetGlobal();
       } else if(sparam == "resetGlobalBtn") {
          resetGlobal();
       }

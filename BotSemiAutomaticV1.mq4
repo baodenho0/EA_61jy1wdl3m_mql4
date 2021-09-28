@@ -34,6 +34,7 @@ bool checkHedging = false;
 string SupDem = "SupDem";
 string globalRandom = "_j7a2zwqfp4_BotSemiAutoV1"; //v1.1 add
 extern bool drawTPLine = true;
+int slippage = 1;
 
 int OnInit()
   {
@@ -190,7 +191,7 @@ void runTrading(string sym, int tradeType, double lot = 0)
    if(entry && SL && TP) {
       // Alert(sym + " " + tradeType + " " + lot + " " + entry + " " + SL + " " + TP + " " + magic + " " + tradeColor);
       string commentRoot = "SL:" + SL;
-      OrderSend(sym, tradeType, lot, entry, 3, 0, 0, commentRoot, magic, 0, tradeColor);
+      OrderSend(sym, tradeType, lot, entry, slippage, 0, 0, commentRoot, magic, 0, tradeColor);
       
       if(tradeType == OP_BUY) {
          setNextTradeStop(OP_SELLSTOP);
@@ -583,7 +584,7 @@ void closeTradingByTradeType(string sym, int tradeType)
          setCurrentLossTrade(getCurrentLossTrade() + OrderProfit());
          setCountCurrentLossTrade(getCountCurrentLossTrade() + 1);
          
-         OrderClose(OrderTicket() , OrderLots(), closePrice, 0);
+         OrderClose(OrderTicket() , OrderLots(), closePrice, slippage);
       }
    }
    
@@ -608,7 +609,7 @@ void closeAll(string sym)
                OrderDelete(OrderTicket());
             }
             
-           OrderClose(OrderTicket(), OrderLots(), closePrice, 0);            
+           OrderClose(OrderTicket(), OrderLots(), closePrice, slippage);            
        }
    }
 
@@ -728,7 +729,7 @@ void useHedge(string sym)
       string commentOrder = "AccountProfit: " + AccountProfit() + " | CurrentLossTrade: " + getCurrentLossTrade() + "(" + getCountCurrentLossTrade() + ")";
       
       while(true) {
-         int checkOrder = OrderSend(sym, hedgeType, hedgeLot, hedgeEntry, 3, 0, 0, commentOrder, magic, 0);
+         int checkOrder = OrderSend(sym, hedgeType, hedgeLot, hedgeEntry, slippage, 0, 0, commentOrder, magic, 0);
          if(checkOrder >= 0) {
             break;
          }

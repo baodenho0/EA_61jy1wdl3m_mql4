@@ -34,7 +34,7 @@ bool checkHedging = false;
 string SupDem = "SupDem";
 string globalRandom = "_j7a2zwqfp4_BotSemiAutoV1"; //v1.1 add
 extern bool drawTPLine = true;
-int slippage = 1;
+int slippage = 0;
 
 int OnInit()
   {
@@ -598,9 +598,10 @@ void closeAll(string sym)
    double closePrice;
    double bidPrice = MarketInfo(sym, MODE_BID);
    double askPrice = MarketInfo(sym, MODE_ASK);
+   int orderTotal = OrdersTotal();
    
-   for(int i = OrdersTotal() - 1; i >= 0; i--) {
-       if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES) && OrderMagicNumber() == magic) {
+   while(true) {
+       if(OrderSelect(0, SELECT_BY_POS, MODE_TRADES) && OrderMagicNumber() == magic) {
             if(OrderType() == OP_BUY) {
                closePrice = bidPrice;
             } else if(OrderType() == OP_SELL) {
@@ -609,7 +610,9 @@ void closeAll(string sym)
                OrderDelete(OrderTicket());
             }
             
-           OrderClose(OrderTicket(), OrderLots(), closePrice, slippage);            
+           OrderClose(OrderTicket(), OrderLots(), closePrice, slippage);
+       } else {
+         break;
        }
    }
 

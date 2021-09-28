@@ -190,8 +190,9 @@ void runTrading(string sym, int tradeType, double lot = 0)
    
    if(entry && SL && TP) {
       // Alert(sym + " " + tradeType + " " + lot + " " + entry + " " + SL + " " + TP + " " + magic + " " + tradeColor);
-      string commentRoot = "SL:" + SL;
-      OrderSend(sym, tradeType, lot, entry, slippage, 0, 0, commentRoot, magic, 0, tradeColor);
+      //string commentRoot = "SL:" + SL; 
+      string commentOrder = getCommentOrder();     
+      OrderSend(sym, tradeType, lot, entry, slippage, 0, 0, commentOrder, magic, 0, tradeColor);
       
       if(tradeType == OP_BUY) {
          setNextTradeStop(OP_SELLSTOP);
@@ -726,11 +727,16 @@ void useHedge(string sym)
       double hedgeLot = lastLot * 1.5;
       if(lastLot == 0.01) {
          hedgeLot = 0.02;
-      }
+      }      
       
-      int i = 0;
-      string commentOrder = "AccountProfit: " + AccountProfit() + " | CurrentLossTrade: " + getCurrentLossTrade() + "(" + getCountCurrentLossTrade() + ")";
+      if(hedgeType == OP_SELLSTOP) {
+         setNextTradeStop(OP_BUYSTOP);
+      } else if(hedgeType == OP_BUYSTOP) {
+         setNextTradeStop(OP_SELLSTOP);
+      }      
+      closeTradingByTradeType(sym, closeType);
       
+      string commentOrder = getCommentOrder();      
       while(true) {
          int checkOrder = OrderSend(sym, hedgeType, hedgeLot, hedgeEntry, slippage, 0, 0, commentOrder, magic, 0);
          if(checkOrder >= 0) {
@@ -738,17 +744,7 @@ void useHedge(string sym)
          }
          Alert("Error: " + GetLastError());
          Sleep(100);
-         i++;
-      }
-      
-      
-      if(hedgeType == OP_SELLSTOP) {
-         setNextTradeStop(OP_BUYSTOP);
-      } else if(hedgeType == OP_BUYSTOP) {
-         setNextTradeStop(OP_SELLSTOP);
-      }
-      
-      closeTradingByTradeType(sym, closeType);
+      }      
    }
 }
 
@@ -931,5 +927,12 @@ void removeDrawTPLine()
    for(int i = 0; i <= 3; i++) {
       ObjectDelete("TPLine" + i);
    }
+}
+
+string getCommentOrder()
+{
+   string commentOrder = "B:" + NormalizeDouble(AccountBalance(), 2) + "L:" + NormalizeDouble(getCurrentLossTrade(), 2) + "|" + getCountCurrentLossTrade();
+
+   return StringSubstr(commentOrder, 0, 31);;
 }
 

@@ -561,73 +561,57 @@ void closeTradingByProfit(string sym)
    AccountProfit() + getCurrentLossTrade() >= rewardAmount
    || AccountProfit() + getCurrentLossTrade() >= 0 && getCountCurrentLossTrade() >= 3
    ) {
-      for(int i = OrdersTotal() - 1; i >= 0; i--) {
-         if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES) && OrderMagicNumber() == magic) {
-            if(OrderType() == OP_BUY) {
-               closeType = MODE_BID;
-            } else if(OrderType() == OP_SELL) {
-               closeType = MODE_ASK;
-            } else {
-               OrderDelete(OrderTicket());
-            }
-            
-            OrderClose(OrderTicket() , OrderLots(), MarketInfo(sym, closeType), 5);            
-         }
-      }
-      /*
-      setCurrentLossTrade(0);
-      setCountCurrentLossTrade(0);
-      */
-      resetGlobal();
-      Alert("closeTradingByProfit");
+      closeAll(sym);
+      Alert("closeTradingByProfit()");
    }
 }
 
 void closeTradingByTradeType(string sym, int tradeType)
 {
-   int closeType;
+   double closePrice;
+   double bidPrice = MarketInfo(sym, MODE_BID);
+   double askPrice = MarketInfo(sym, MODE_ASK);
    
    for(int i = OrdersTotal() - 1; i >= 0; i--) {
       if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES) && OrderMagicNumber() == magic && tradeType == OrderType()) {
          if(OrderType() == OP_BUY) {
-            closeType = MODE_BID;
+            closePrice = bidPrice;
          } else if(OrderType() == OP_SELL) {
-            closeType = MODE_ASK;
+            closePrice = askPrice;
          }
          
          setCurrentLossTrade(getCurrentLossTrade() + OrderProfit());
          setCountCurrentLossTrade(getCountCurrentLossTrade() + 1);
          
-         OrderClose(OrderTicket() , OrderLots(), MarketInfo(sym, closeType), 5);
+         OrderClose(OrderTicket() , OrderLots(), closePrice, 0);
       }
    }
    
-   if(getCurrentLossTrade() > 0) {
-      setCurrentLossTrade(0);
-      setCountCurrentLossTrade(0);
+   if(getCurrentLossTrade() > 0) { 
+      resetGlobal();
    }
 }
 
 void closeAll(string sym)
 {
-   int closeType = -1;
+   double closePrice;
+   double bidPrice = MarketInfo(sym, MODE_BID);
+   double askPrice = MarketInfo(sym, MODE_ASK);
+   
    for(int i = OrdersTotal() - 1; i >= 0; i--) {
-         if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES) && OrderMagicNumber() == magic) {
+       if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES) && OrderMagicNumber() == magic) {
             if(OrderType() == OP_BUY) {
-               closeType = MODE_BID;
+               closePrice = bidPrice;
             } else if(OrderType() == OP_SELL) {
-               closeType = MODE_ASK;
+               closePrice = askPrice;
             } else {
                OrderDelete(OrderTicket());
             }
             
-           OrderClose(OrderTicket() , OrderLots(), MarketInfo(sym, closeType), 5);            
+           OrderClose(OrderTicket(), OrderLots(), closePrice, 0);            
        }
-    }  
-   /*
-   setCurrentLossTrade(0);
-   setCountCurrentLossTrade(0);
-   */
+   }
+
    resetGlobal();
 }
 
@@ -741,13 +725,15 @@ void useHedge(string sym)
       }
       
       int i = 0;
+      string commentOrder = "AccountProfit: " + AccountProfit() + " | CurrentLossTrade: " + getCurrentLossTrade() + "(" + getCountCurrentLossTrade() + ")";
+      
       while(true) {
-         int checkOrder = OrderSend(sym, hedgeType, hedgeLot, hedgeEntry, 3, 0, 0, comment, magic, 0);
+         int checkOrder = OrderSend(sym, hedgeType, hedgeLot, hedgeEntry, 3, 0, 0, commentOrder, magic, 0);
          if(checkOrder >= 0) {
             break;
          }
          Alert("Error: " + GetLastError());
-         Sleep(90);
+         Sleep(100);
          i++;
       }
       

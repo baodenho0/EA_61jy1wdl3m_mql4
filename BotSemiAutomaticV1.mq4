@@ -190,7 +190,7 @@ void runTrading(string sym, int tradeType, double lot = 0)
    if(entry && SL && TP) {
       // Alert(sym + " " + tradeType + " " + lot + " " + entry + " " + SL + " " + TP + " " + magic + " " + tradeColor);
       string commentRoot = "SL:" + SL;
-      OrderSend(sym, tradeType, lot, entry, 20, 0, 0, commentRoot, magic, 0, tradeColor);
+      OrderSend(sym, tradeType, lot, entry, 3, 0, 0, commentRoot, magic, 0, tradeColor);
       
       if(tradeType == OP_BUY) {
          setNextTradeStop(OP_SELLSTOP);

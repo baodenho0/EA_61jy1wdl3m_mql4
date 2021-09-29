@@ -580,12 +580,23 @@ void closeTradingByTradeType(string sym, int tradeType)
             closePrice = bidPrice;
          } else if(OrderType() == OP_SELL) {
             closePrice = askPrice;
+         }                 
+         
+         int tmpSlippage = slippage;
+         double orderProfit = 0;
+         while(true) {
+            orderProfit = OrderProfit();
+            bool checkClose = OrderClose(OrderTicket() , OrderLots(), closePrice, tmpSlippage);
+            if(checkClose) {
+               break;
+            }
+            tmpSlippage++;
+            
+            Alert("Error: " + GetLastError() + " | slippage: " + slippage);
          }
          
-         setCurrentLossTrade(getCurrentLossTrade() + OrderProfit());
-         setCountCurrentLossTrade(getCountCurrentLossTrade() + 1);
-         
-         OrderClose(OrderTicket() , OrderLots(), closePrice, slippage);
+         setCurrentLossTrade(getCurrentLossTrade() + orderProfit);
+         setCountCurrentLossTrade(getCountCurrentLossTrade() + 1);         
       }
    }
    

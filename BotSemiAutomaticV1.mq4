@@ -35,6 +35,7 @@ string SupDem = "SupDem";
 string globalRandom = "_j7a2zwqfp4_BotSemiAutoV1"; //v1.1 add
 extern bool drawTPLine = true;
 int slippage = 0;
+extern bool drawSLLine = true;
 
 int OnInit()
   {
@@ -127,7 +128,8 @@ void OnTick()
    int tradeType = -1;
    // commentReport();
    drawButton(sym);  
-   checkDrawTPLine(sym);
+   checkDrawTPLine(sym);   
+   checkDrawSLLine(sym);
    checkBreakEven(sym);
    closeTradingByProfit(sym);
    useHedge(sym);
@@ -947,3 +949,47 @@ string getCommentOrder()
    return StringSubstr(commentOrder, 0, 31);;
 }
 
+void checkDrawSLLine(string sym)
+{
+   if(!drawSLLine) {
+      return;
+   }
+
+   if(checkNewCandle(sym) || OrdersTotal() > 0) {
+      removeDrawSLLine();
+   }
+   
+   if(OrdersTotal() == 0) {
+      double slBuy = getSL(sym, OP_BUY);
+      double slSell = getSL(sym, OP_SELL);
+   
+      ObjectCreate("SLLine0", OBJ_TREND , 0, Time[1], slBuy, Time[3], slBuy);
+      ObjectSet("SLLine0", OBJPROP_STYLE, STYLE_SOLID);
+      ObjectSet("SLLine0", OBJPROP_COLOR, Red);
+      ObjectSet("SLLine0", OBJPROP_WIDTH, 0);
+      ObjectSetInteger(0 ,"SLLine0", OBJPROP_RAY_RIGHT, false);
+      
+      ObjectCreate("SLLine1", OBJ_TREND , 0, Time[1], slSell, Time[3], slSell);
+      ObjectSet("SLLine1", OBJPROP_STYLE, STYLE_SOLID);
+      ObjectSet("SLLine1", OBJPROP_COLOR, Red);
+      ObjectSet("SLLine1", OBJPROP_WIDTH, 0);
+      ObjectSetInteger(0 ,"SLLine1", OBJPROP_RAY_RIGHT, false);
+   }
+}
+
+void removeDrawSLLine()
+{
+   for(int i = 0; i < 2; i++) {
+      ObjectDelete("SLLine" + i);
+   }    
+}
+
+bool checkNewCandle(string sym)
+{
+   if(tradeTime == iTime(sym, timeframe, 0)) {
+      return false;
+   }
+   tradeTime = iTime(sym, 0, 0);
+   
+   return true;
+}

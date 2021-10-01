@@ -775,7 +775,15 @@ bool checkSideway(string sym)
 void drawButton(string sym)
 {
    long currentChartId = ChartID();  
-
+   
+   double spread = MarketInfo(sym, MODE_SPREAD);
+   
+   ObjectCreate(currentChartId, "showSpread", OBJ_LABEL, 0, 0 ,0);   
+   ObjectSet("showSpread", OBJPROP_CORNER, CORNER_RIGHT_UPPER);
+   ObjectSet("showSpread", OBJPROP_XDISTANCE, 50);
+   ObjectSet("showSpread", OBJPROP_YDISTANCE, 160);
+   ObjectSetText("showSpread", "Spread: " + spread + " Next bar in: " + getNextBar(), 15, "Impact", Red);
+   
    ObjectCreate(currentChartId, "accountProfit", OBJ_LABEL, 0, 0 ,0);   
    ObjectSet("accountProfit", OBJPROP_CORNER, CORNER_RIGHT_UPPER);
    ObjectSet("accountProfit", OBJPROP_XDISTANCE, 50);
@@ -992,4 +1000,44 @@ bool checkNewCandle(string sym)
    tradeTime = iTime(sym, 0, 0);
    
    return true;
+}
+
+string getNextBar()
+{
+   string nextBar;
+   int s = Time[0] + PeriodSeconds() - TimeCurrent();
+      
+   int d = 86400;
+   int h = 3600;
+   int m = 60;
+   int nextD;
+   int nextH;
+   int nextM;
+   
+   if(s >= d) {
+      nextD = s/d;
+      s = s - d * nextD;
+   }
+   if(s >= h) {
+      nextH = s/h;
+      s = s - h * nextH;
+   }
+   if(s >= m) {
+      nextM = s/m;
+      s = s - m * nextM;
+   }  
+   
+   if(nextD > 0) {
+      nextBar += nextD + "d ";
+   }
+   if(nextH > 0) {
+      nextBar += nextH + "h ";
+   }
+   if(nextM > 0) {
+      nextBar += nextM + "m ";
+   }
+   
+   nextBar += s + "s"; 
+   
+   return nextBar;
 }

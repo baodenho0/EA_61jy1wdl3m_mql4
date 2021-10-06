@@ -156,6 +156,11 @@ void runTrading(string sym, int tradeType, double lot = 0)
       Alert("Cannot trade");
       return;
    }
+   
+   if(getSecondsLeft() <= 10) {
+      Alert("secondsLeft: " + getSecondsLeft());
+      return;
+   }
 
    double entry = 0;
    color tradeColor = clrBlue;
@@ -1005,7 +1010,7 @@ bool checkNewCandle(string sym)
 string getNextBar()
 {
    string nextBar;
-   int s = Time[0] + PeriodSeconds() - TimeCurrent();
+   int s = getSecondsLeft();
       
    int d = 86400;
    int h = 3600;
@@ -1040,4 +1045,9 @@ string getNextBar()
    nextBar += s + "s"; 
    
    return nextBar;
+}
+
+int getSecondsLeft()
+{
+   return Time[0] + PeriodSeconds() - TimeCurrent();
 }

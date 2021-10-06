@@ -175,7 +175,7 @@ void runTrading(string sym, int tradeType, double lot = 0)
       return;
    }   
    
-   double SL = getSL(sym, tradeType);
+   double SL = getSL(sym, tradeType, true);
    //double SL = getSLByPips(sym, tradeType, entry);
    double TP = getTP(entry, SL);
    
@@ -260,12 +260,12 @@ double getLot(string sym, double SLPoints)
     return(lotSize);
 }
 
-double getSL(string sym, int tradeType)
+double getSL(string sym, int tradeType, bool alert = false)
 {
    int candleNumber;
    double SL = 0;
    double spread = MarketInfo(sym, MODE_SPREAD);
-   if(spread > maxSpreadPoints) {
+   if(spread > maxSpreadPoints && alert == true) {
       Alert("Spread: " + spread);
       return 0;
    }

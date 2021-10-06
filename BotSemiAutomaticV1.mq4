@@ -195,7 +195,7 @@ void runTrading(string sym, int tradeType, double lot = 0)
       lot = getLot(sym, SLPoints);
    }
    
-   if(entry && SL && TP) {
+   if(entry && SL && TP && lot > 0) {
       // Alert(sym + " " + tradeType + " " + lot + " " + entry + " " + SL + " " + TP + " " + magic + " " + tradeColor);
       //string commentRoot = "SL:" + SL; 
       string commentOrder = getCommentOrder();     
@@ -228,6 +228,9 @@ double getLot(string sym, double SLPoints)
     if(SLPoints != 0 && tickSize != 0 && tickVal != 0) {
     SLPoints = SLPoints * MarketInfo(sym, MODE_POINT);
       lotSize = amountRisk / (SLPoints * tickVal / tickSize);
+      Alert("lotSize=amountRisk/(SLPoints*tickVal/tickSize) - " + lotSize + "=" + amountRisk + "/" + "(" + SLPoints + "*" + tickVal + "/" + tickSize + ")");
+    } else {
+      return 0;
     }
 
     double lotStep = MarketInfo(sym, MODE_LOTSTEP);
@@ -252,7 +255,7 @@ double getLot(string sym, double SLPoints)
       lotSize = MarketInfo(sym, MODE_MAXLOT);   
     }            
     
-    Alert("balance: " + balance + " | amountRisk: " + amountRisk + " | lotSize: " + lotSize + " | SLPoints: " + SLPoints);  
+    //Alert("balance: " + balance + " | amountRisk: " + amountRisk + " | lotSize: " + lotSize + " | SLPoints: " + SLPoints);  
       
     return(lotSize);
 }

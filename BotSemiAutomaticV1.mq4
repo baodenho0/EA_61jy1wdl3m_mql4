@@ -18,7 +18,7 @@ int magic = 12444;
 ENUM_TIMEFRAMES timeframe = 0;
 extern double risk = 1; // risk (1%)
 extern double reward = 3; // reward (3%)
-extern double breakEven = 99999;
+double breakEven = 99999;
 extern int minSLPoints = 50;
 extern int maxSLPoints = 150;
 extern double maxSpreadPoints = 30;
@@ -36,6 +36,7 @@ string globalRandom = "_j7a2zwqfp4_BotSemiAutoV1"; //v1.1 add
 extern bool drawTPLine = true;
 int slippage = 0;
 extern bool drawSLLine = true;
+extern int totalOrderBreakeven = 3;
 
 int OnInit()
   {
@@ -571,7 +572,7 @@ void closeTradingByProfit(string sym)
      
    if(
    AccountProfit() + getCurrentLossTrade() >= rewardAmount
-   || AccountProfit() + getCurrentLossTrade() >= 0 && getCountCurrentLossTrade() >= 3
+   || AccountProfit() + getCurrentLossTrade() >= 0 && getCountCurrentLossTrade() >= totalOrderBreakeven
    ) {
       closeAll(sym);
       Alert("closeTradingByProfit()");
@@ -580,29 +581,30 @@ void closeTradingByProfit(string sym)
 
 void closeTradingByTradeType(string sym, int tradeType)
 {
-   double closePrice;
-   double bidPrice = MarketInfo(sym, MODE_BID);
-   double askPrice = MarketInfo(sym, MODE_ASK);
+   double closePrice; 
+   double bidPrice;
+   double askPrice;
    
    for(int i = OrdersTotal() - 1; i >= 0; i--) {
-      if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES) && OrderMagicNumber() == magic && tradeType == OrderType()) {
-         if(OrderType() == OP_BUY) {
-            closePrice = bidPrice;
-         } else if(OrderType() == OP_SELL) {
-            closePrice = askPrice;
-         }                 
+      if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES) && OrderMagicNumber() == magic && tradeType == OrderType()) {                     
          
-         int tmpSlippage = slippage;
          double orderProfit = 0;
          while(true) {
+            bidPrice = MarketInfo(sym, MODE_BID);
+            askPrice = MarketInfo(sym, MODE_ASK);
+         
+            if(OrderType() == OP_BUY) {
+               closePrice = bidPrice;
+            } else if(OrderType() == OP_SELL) {
+               closePrice = askPrice;
+            }   
+         
             orderProfit = OrderProfit();
-            bool checkClose = OrderClose(OrderTicket() , OrderLots(), closePrice, tmpSlippage);
+            bool checkClose = OrderClose(OrderTicket() , OrderLots(), closePrice, slippage);
             if(checkClose) {
                break;
             }
-            tmpSlippage++;
-            
-            Alert("Error: " + GetLastError() + " | slippage: " + slippage);
+            Alert("Error: " + GetLastError() + " | slippage: " + slippage);            
          }
          
          setCurrentLossTrade(getCurrentLossTrade() + orderProfit);
@@ -924,38 +926,63 @@ void resetGlobal()
 
 void checkDrawTPLine(string sym)
 {
-   if(drawTPLine && getNextTradeStop() >= 0) {
-      double distance = (getBuyStop() - getSellStop()) / MarketInfo(sym, MODE_POINT);
-      double tp1 = distance * 1.5;
-      double tp2 = distance * reward;
+   if(drawTPLine) {
+      removeDrawTPLine();   
+      double buyTP1;
+      double buyTP2;
+      double sellTP1;
+      double sellTP2;
+      
+      if(getNextTradeStop() >= 0) {        
+         double SLPoints = (getBuyStop() - getSellStop()) / MarketInfo(sym, MODE_POINT);
+         buyTP1 = getBuyStop() + SLPoints * 1.5 * MarketInfo(sym, MODE_POINT);
+         buyTP2 = getBuyStop() + SLPoints * reward * MarketInfo(sym, MODE_POINT);
+         sellTP1 = getSellStop() - SLPoints * 1.5 * MarketInfo(sym, MODE_POINT);
+         sellTP2 = getSellStop() - SLPoints * reward * MarketInfo(sym, MODE_POINT);         
+      } else {        
+         double slBuy = getSL(sym, OP_BUY);
+         double slSell = getSL(sym, OP_SELL);
+         double buySLPoints = (MarketInfo(sym, MODE_ASK) - slBuy) / MarketInfo(sym, MODE_POINT);
+         double sellSLPoints = (slSell - MarketInfo(sym, MODE_BID)) / MarketInfo(sym, MODE_POINT);
+         
+         buyTP1 = MarketInfo(sym, MODE_ASK) + buySLPoints * 1.5 * MarketInfo(sym, MODE_POINT);
+         buyTP2 = MarketInfo(sym, MODE_ASK) + buySLPoints * reward * MarketInfo(sym, MODE_POINT);
+         sellTP1 = MarketInfo(sym, MODE_BID) - sellSLPoints * 1.5 * MarketInfo(sym, MODE_POINT);
+         sellTP2 = MarketInfo(sym, MODE_BID) - sellSLPoints * reward * MarketInfo(sym, MODE_POINT);
+      }        
    
-      ObjectCreate("TPLine0", OBJ_HLINE , 0,Time[0], getBuyStop() + tp1 * MarketInfo(sym, MODE_POINT));
-      ObjectSet("TPLine0", OBJPROP_STYLE, STYLE_DASH);
-      ObjectSet("TPLine0", OBJPROP_COLOR, Magenta);
-      ObjectSet("TPLine0", OBJPROP_WIDTH, 0);
+      if(buyTP1 > MarketInfo(sym, MODE_ASK)) {
+         ObjectCreate("BuyTP1", OBJ_HLINE , 0,Time[0], buyTP1);
+         ObjectSet("BuyTP1", OBJPROP_STYLE, STYLE_DASH);
+         ObjectSet("BuyTP1", OBJPROP_COLOR, Magenta);
+         ObjectSet("BuyTP1", OBJPROP_WIDTH, 0);
+         
+         ObjectCreate("BuyTP2", OBJ_HLINE , 0,Time[0], buyTP2);
+         ObjectSet("BuyTP2", OBJPROP_STYLE, STYLE_SOLID);
+         ObjectSet("BuyTP2", OBJPROP_COLOR, Magenta);
+         ObjectSet("BuyTP2", OBJPROP_WIDTH, 0);
+      }
       
-      ObjectCreate("TPLine1", OBJ_HLINE , 0,Time[0], getSellStop() - tp1 * MarketInfo(sym, MODE_POINT));
-      ObjectSet("TPLine1", OBJPROP_STYLE, STYLE_DASH);
-      ObjectSet("TPLine1", OBJPROP_COLOR, Magenta);
-      ObjectSet("TPLine1", OBJPROP_WIDTH, 0);
-      
-      ObjectCreate("TPLine2", OBJ_HLINE , 0,Time[0], getBuyStop() + tp2 * MarketInfo(sym, MODE_POINT));
-      ObjectSet("TPLine2", OBJPROP_STYLE, STYLE_SOLID);
-      ObjectSet("TPLine2", OBJPROP_COLOR, Magenta);
-      ObjectSet("TPLine2", OBJPROP_WIDTH, 0);
-      
-      ObjectCreate("TPLine3", OBJ_HLINE , 0,Time[0], getSellStop() - tp2 * MarketInfo(sym, MODE_POINT));
-      ObjectSet("TPLine3", OBJPROP_STYLE, STYLE_SOLID);
-      ObjectSet("TPLine3", OBJPROP_COLOR, Magenta);
-      ObjectSet("TPLine3", OBJPROP_WIDTH, 0);
+      if(MarketInfo(sym, MODE_BID) > sellTP1) {
+         ObjectCreate("SellTP1", OBJ_HLINE , 0,Time[0], sellTP1);
+         ObjectSet("SellTP1", OBJPROP_STYLE, STYLE_DASH);
+         ObjectSet("SellTP1", OBJPROP_COLOR, Magenta);
+         ObjectSet("SellTP1", OBJPROP_WIDTH, 0);           
+         
+         ObjectCreate("SellTP2", OBJ_HLINE , 0,Time[0], sellTP2);
+         ObjectSet("SellTP2", OBJPROP_STYLE, STYLE_SOLID);
+         ObjectSet("SellTP2", OBJPROP_COLOR, Magenta);
+         ObjectSet("SellTP2", OBJPROP_WIDTH, 0);
+      }
    }
 }
 
 void removeDrawTPLine()
 {
-   for(int i = 0; i <= 3; i++) {
-      ObjectDelete("TPLine" + i);
-   }
+   ObjectDelete("BuyTP1");
+   ObjectDelete("BuyTP2");
+   ObjectDelete("SellTP1");
+   ObjectDelete("SellTP2");
 }
 
 string getCommentOrder()
@@ -979,25 +1006,35 @@ void checkDrawSLLine(string sym)
       double slBuy = getSL(sym, OP_BUY);
       double slSell = getSL(sym, OP_SELL);
    
-      ObjectCreate("SLLine0", OBJ_TREND , 0, Time[1], slBuy, Time[3], slBuy);
-      ObjectSet("SLLine0", OBJPROP_STYLE, STYLE_SOLID);
-      ObjectSet("SLLine0", OBJPROP_COLOR, Red);
-      ObjectSet("SLLine0", OBJPROP_WIDTH, 0);
-      ObjectSetInteger(0 ,"SLLine0", OBJPROP_RAY_RIGHT, false);
+      ObjectCreate("BuySL", OBJ_TREND , 0, Time[1], slBuy, Time[3], slBuy);
+      ObjectSet("BuySL", OBJPROP_STYLE, STYLE_SOLID);
+      ObjectSet("BuySL", OBJPROP_COLOR, Red);
+      ObjectSet("BuySL", OBJPROP_WIDTH, 0);
+      ObjectSetInteger(0 ,"BuySL", OBJPROP_RAY_RIGHT, false);
       
-      ObjectCreate("SLLine1", OBJ_TREND , 0, Time[1], slSell, Time[3], slSell);
-      ObjectSet("SLLine1", OBJPROP_STYLE, STYLE_SOLID);
-      ObjectSet("SLLine1", OBJPROP_COLOR, Red);
-      ObjectSet("SLLine1", OBJPROP_WIDTH, 0);
-      ObjectSetInteger(0 ,"SLLine1", OBJPROP_RAY_RIGHT, false);
+      ObjectCreate("SellSL", OBJ_TREND , 0, Time[1], slSell, Time[3], slSell);
+      ObjectSet("SellSL", OBJPROP_STYLE, STYLE_SOLID);
+      ObjectSet("SellSL", OBJPROP_COLOR, Red);
+      ObjectSet("SellSL", OBJPROP_WIDTH, 0);
+      ObjectSetInteger(0 ,"SellSL", OBJPROP_RAY_RIGHT, false);
+      
+      double buySLPoints = (MarketInfo(sym, MODE_ASK) - slBuy) / MarketInfo(sym, MODE_POINT);
+      double sellSLPoints = (slSell - MarketInfo(sym, MODE_BID)) / MarketInfo(sym, MODE_POINT);
+      
+      ObjectCreate("BuySLPoints", OBJ_TEXT, 0, Time[2], slBuy - 40 * MarketInfo(sym, MODE_POINT));
+      ObjectSetText ("BuySLPoints", NormalizeDouble(DoubleToString(buySLPoints), 2), 10, "Calibri", clrRed); 
+      
+      ObjectCreate("SellSLPoints", OBJ_TEXT, 0, Time[2], slSell + 70 * MarketInfo(sym, MODE_POINT));
+      ObjectSetText ("SellSLPoints", NormalizeDouble(DoubleToString(sellSLPoints), 2), 10, "Calibri", clrRed);           
    }
 }
 
 void removeDrawSLLine()
 {
-   for(int i = 0; i < 2; i++) {
-      ObjectDelete("SLLine" + i);
-   }    
+   ObjectDelete("BuySL"); 
+   ObjectDelete("SellSL"); 
+   ObjectDelete("BuySLPoints"); 
+   ObjectDelete("SellSLPoints"); 
 }
 
 bool checkNewCandle(string sym)

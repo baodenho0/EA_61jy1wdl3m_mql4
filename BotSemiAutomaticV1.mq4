@@ -951,7 +951,7 @@ void checkDrawTPLine(string sym)
          sellTP2 = MarketInfo(sym, MODE_BID) - sellSLPoints * reward * MarketInfo(sym, MODE_POINT);
       }        
    
-      if(buyTP1 > MarketInfo(sym, MODE_ASK)) {
+      if(buyTP1 > MarketInfo(sym, MODE_ASK) || getNextTradeStop() >= 0) {
          ObjectCreate("BuyTP1", OBJ_HLINE , 0,Time[0], buyTP1);
          ObjectSet("BuyTP1", OBJPROP_STYLE, STYLE_DASH);
          ObjectSet("BuyTP1", OBJPROP_COLOR, Magenta);
@@ -963,7 +963,7 @@ void checkDrawTPLine(string sym)
          ObjectSet("BuyTP2", OBJPROP_WIDTH, 0);
       }
       
-      if(MarketInfo(sym, MODE_BID) > sellTP1) {
+      if(MarketInfo(sym, MODE_BID) > sellTP1 || getNextTradeStop() >= 0) {
          ObjectCreate("SellTP1", OBJ_HLINE , 0,Time[0], sellTP1);
          ObjectSet("SellTP1", OBJPROP_STYLE, STYLE_DASH);
          ObjectSet("SellTP1", OBJPROP_COLOR, Magenta);
@@ -1021,10 +1021,10 @@ void checkDrawSLLine(string sym)
       double buySLPoints = (MarketInfo(sym, MODE_ASK) - slBuy) / MarketInfo(sym, MODE_POINT);
       double sellSLPoints = (slSell - MarketInfo(sym, MODE_BID)) / MarketInfo(sym, MODE_POINT);
       
-      ObjectCreate("BuySLPoints", OBJ_TEXT, 0, Time[2], slBuy - 40 * MarketInfo(sym, MODE_POINT));
+      ObjectCreate("BuySLPoints", OBJ_TEXT, 0, Time[0], slBuy);
       ObjectSetText ("BuySLPoints", NormalizeDouble(DoubleToString(buySLPoints), 2), 10, "Calibri", clrRed); 
       
-      ObjectCreate("SellSLPoints", OBJ_TEXT, 0, Time[2], slSell + 70 * MarketInfo(sym, MODE_POINT));
+      ObjectCreate("SellSLPoints", OBJ_TEXT, 0, Time[0], slSell);
       ObjectSetText ("SellSLPoints", NormalizeDouble(DoubleToString(sellSLPoints), 2), 10, "Calibri", clrRed);           
    }
 }

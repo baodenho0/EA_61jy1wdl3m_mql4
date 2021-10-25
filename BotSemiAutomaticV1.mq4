@@ -177,6 +177,9 @@ void runTrading(string sym, int tradeType, double lot = 0)
    }   
    
    double SL = getSL(sym, tradeType, true);
+   if(!SL) {
+      return;
+   }
    //double SL = getSLByPips(sym, tradeType, entry);
    double TP = getTP(entry, SL);
    

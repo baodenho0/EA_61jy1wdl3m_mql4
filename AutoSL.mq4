@@ -73,7 +73,7 @@ void OnTick()
    
    if(lotsGlobal > 0) {
       checkDragObj(sym);
-   }   
+   }
   }
 //+------------------------------------------------------------------+
 
@@ -84,7 +84,10 @@ void runTrading(string sym, int tradeType, double entry, double SL, double TP)
    
    if(entry && SL && TP && lots > 0) {
       string commentOrder = NULL;
-      OrderSend(sym, tradeType, lots, entry, slippage, SL, TP, commentOrder, magic, 0, clrRed);
+      int check = OrderSend(sym, tradeType, lots, entry, slippage, SL, TP, commentOrder, magic, 0, clrRed);
+      if(check >= 0) {
+         Alert("OK");
+      }
       
       removeSetup();
    }

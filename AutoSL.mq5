@@ -113,7 +113,7 @@ datetime Time[];
 int OnInit()
   {
 //---
-   
+   EventSetTimer(1); 
 //---
    return(INIT_SUCCEEDED);
   }
@@ -123,7 +123,7 @@ int OnInit()
 void OnDeinit(const int reason)
   {
 //---
-   
+   EventKillTimer(); 
   }
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
@@ -131,18 +131,8 @@ void OnDeinit(const int reason)
 void OnTick()
   {
   
-   ChartSetInteger(0,CHART_SHOW_OBJECT_DESCR,true);
-      string sym = Symbol();
+   ChartSetInteger(0,CHART_SHOW_OBJECT_DESCR,true);      
       
-      int start = 0; // bar index
-      int count = 1;
-      CopyTime(sym,0,start,count,Time);
-      drawButton(sym);
-      //checkBreakEven(sym);
-      
-      if(lotsGlobal > 0) {
-         checkDragObj(sym);
-      }
   }
 //+------------------------------------------------------------------+
 
@@ -343,7 +333,7 @@ double MarketInfo(string symbol,
                       double price3=0)
   {
    return(ObjectCreate(0,name,type,window,
-          time1,price1,time2,price2,time3,price3));
+          0,price1,time2,price2,time3,price3));
   }
 
 void runTrading(string sym, int tradeType, double entry, double SL, double TP) 
@@ -742,7 +732,7 @@ void drawButton(string sym)
 {
    long currentChartId = ChartID();  
    
-   double spread = MarketInfo(sym, MODE_SPREAD);
+   int spread = MarketInfo(sym, MODE_SPREAD);
    
    ObjectCreateMQL4("showSpread", OBJ_LABEL, 0, 0 ,0);   
    ObjectSet("showSpread", OBJPROP_CORNER, CORNER_RIGHT_UPPER);
@@ -940,20 +930,20 @@ int getSecondsLeft()
 
 void showSetup(string sym, string sparam)
 {
-   ObjectCreateMQL4("visualTp", OBJ_HLINE , 0,Time[0], MarketInfo(sym, MODE_ASK) + 20);
+   ObjectCreateMQL4("visualTp", OBJ_HLINE , 0,Time[0], MarketInfo(sym, MODE_ASK) + 10 * MarketInfo(sym, MODE_POINT));
    ObjectSet("visualTp", OBJPROP_STYLE, STYLE_SOLID);
-   ObjectSet("visualTp", OBJPROP_COLOR, Blue);
+   ObjectSet("visualTp", OBJPROP_COLOR, clrBlue);
    ObjectSet("visualTp", OBJPROP_WIDTH, 2);
    ObjectSetInteger(0,"visualTp",OBJPROP_SELECTABLE,true);
    ObjectSetInteger(0,"visualTp",OBJPROP_SELECTED,true);
-   ObjectSet("visualTp", OBJPROP_CORNER, 0);
+   //ObjectSet("visualTp", OBJPROP_CORNER, 0);
    //ObjectSetText("visualTp", "          TP", 10, "Arial", clrBlack);
    ObjectSetString( 0,"visualTp", OBJPROP_TEXT,  "          TP");
    ObjectSetInteger (0,"visualTp",OBJPROP_BACK, true); 
-   
-   ObjectCreateMQL4("visualSl", OBJ_HLINE , 0,Time[0], MarketInfo(sym, MODE_ASK));
+
+   ObjectCreateMQL4("visualSl", OBJ_HLINE , 0,Time[0], MarketInfo(sym, MODE_ASK) - 10 * MarketInfo(sym, MODE_POINT));
    ObjectSet("visualSl", OBJPROP_STYLE, STYLE_SOLID);
-   ObjectSet("visualSl", OBJPROP_COLOR, Red);
+   ObjectSet("visualSl", OBJPROP_COLOR, clrRed);
    ObjectSet("visualSl", OBJPROP_WIDTH, 2);
    ObjectSetInteger(0,"visualSl",OBJPROP_SELECTABLE,true);
    ObjectSetInteger(0,"visualSl",OBJPROP_SELECTED,true);
@@ -962,10 +952,10 @@ void showSetup(string sym, string sparam)
    ObjectSetInteger (0,"visualSl",OBJPROP_BACK, true); 
    
    if(sparam == "PendingBtn") {
-      ObjectCreateMQL4("visualEntry", OBJ_HLINE , 0,Time[0], MarketInfo(sym, MODE_ASK) - 20);
+      ObjectCreateMQL4("visualEntry", OBJ_HLINE , 0,Time[0], MarketInfo(sym, MODE_ASK));
       ObjectSet("visualEntry", OBJPROP_STYLE, STYLE_SOLID);
-      ObjectSet("visualEntry", OBJPROP_STYLE, STYLE_SOLID);
-      ObjectSet("visualEntry", OBJPROP_COLOR, Yellow);
+      //ObjectSet("visualEntry", OBJPROP_STYLE, STYLE_SOLID);
+      ObjectSet("visualEntry", OBJPROP_COLOR, clrYellow);
       ObjectSet("visualEntry", OBJPROP_WIDTH, 2);
       ObjectSetInteger(0, "visualEntry",OBJPROP_SELECTABLE,true);
       ObjectSetInteger(0, "visualEntry",OBJPROP_SELECTED,true);
@@ -1141,4 +1131,21 @@ void checkDragObj(string sym)
    ObjectSetString( 0,"visualEntry", OBJPROP_TEXT, "          Entry " + getTradeType(sym) + " " + DoubleToString(lotsGlobal, 2) + "lots R:R" + getRR(sym));
    ObjectSetString( 0,"visualSl", OBJPROP_TEXT, "          SL " + DoubleToString(getRisk(sym), 2) + "$ " + DoubleToString(getSLPips(sym), 2) + "pips");
    ObjectSetString( 0,"visualTp", OBJPROP_TEXT, "          TP " + DoubleToString(getReward(sym), 2) + "$ " + DoubleToString(getTPPips(sym), 2) + "pips");
+}
+
+void OnTimer() 
+{
+   string sym = Symbol();
+      
+   int start = 0; // bar index
+   int count = 1;
+   CopyTime(sym,0,start,count,Time);
+   drawButton(sym);
+      //checkBreakEven(sym);
+      
+   if(lotsGlobal > 0) {
+      checkDragObj(sym);
+   }
+   
+   Comment(getNextBar());
 }

@@ -939,7 +939,8 @@ void showSetup(string sym, string sparam)
    //ObjectSet("visualTp", OBJPROP_CORNER, 0);
    //ObjectSetText("visualTp", "          TP", 10, "Arial", clrBlack);
    ObjectSetString( 0,"visualTp", OBJPROP_TEXT,  "          TP");
-   ObjectSetInteger (0,"visualTp",OBJPROP_BACK, true); 
+   //ObjectSetInteger (0,"visualTp",OBJPROP_BACK, true); 
+   //ObjectSetInteger(0,"visualTp",OBJPROP_HIDDEN, true); 
 
    ObjectCreateMQL4("visualSl", OBJ_HLINE , 0,Time[0], MarketInfo(sym, MODE_ASK) - 10 * MarketInfo(sym, MODE_POINT));
    ObjectSet("visualSl", OBJPROP_STYLE, STYLE_SOLID);
@@ -949,7 +950,7 @@ void showSetup(string sym, string sparam)
    ObjectSetInteger(0,"visualSl",OBJPROP_SELECTED,true);
    //ObjectSetText("visualSl", "          SL", 10, "Arial", clrBlack);
    ObjectSetString( 0,"visualSl", OBJPROP_TEXT,  "          SL");
-   ObjectSetInteger (0,"visualSl",OBJPROP_BACK, true); 
+   //ObjectSetInteger (0,"visualSl",OBJPROP_BACK, true); 
    
    if(sparam == "PendingBtn") {
       ObjectCreateMQL4("visualEntry", OBJ_HLINE , 0,Time[0], MarketInfo(sym, MODE_ASK));
@@ -961,7 +962,7 @@ void showSetup(string sym, string sparam)
       ObjectSetInteger(0, "visualEntry",OBJPROP_SELECTED,true);
       //ObjectSetText("visualEntry", "          Entry", 10, "Arial", clrBlack);
       ObjectSetString( 0,"visualEntry", OBJPROP_TEXT,  "          Entry");
-      ObjectSetInteger (0,"visualEntry",OBJPROP_BACK, true); 
+      //ObjectSetInteger (0,"visualEntry",OBJPROP_BACK, true); 
    } 
    
    ObjectCreateMQL4("AcceptBtn", OBJ_BUTTON, 0, 0 ,0);   

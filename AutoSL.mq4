@@ -44,6 +44,7 @@ double tpGlobal;
 double entryGlobal;
 double lotsGlobal;
 double slPointsGlobal;
+double tpPointsGlobal;
 
 int OnInit()
   {
@@ -137,7 +138,15 @@ double getLot(string sym, double SLPoints)
     }            
     
     //Alert("balance: " + balance + " | amountRisk: " + amountRisk + " | lotSize: " + lotSize + " | SLPoints: " + SLPoints);  
-      
+    double lotstep = MarketInfo(sym,MODE_LOTSTEP);
+    double maxlot = (AccountFreeMargin())/MarketInfo(sym,MODE_MARGINREQUIRED);
+    maxlot = DoubleToStr(MathFloor(maxlot/lotstep)*lotstep,2); 
+    if(lotSize > maxlot) {
+      Comment("Initial Lots: " + lotSize);
+      lotSize = maxlot;
+    } else {
+      Comment("");
+    }
     return(lotSize);
 }
 
@@ -788,6 +797,21 @@ double getSLPoints(string sym)
    return MathAbs(NormalizeDouble(entryGlobal - slGlobal, MarketInfo(sym, MODE_DIGITS)) / MarketInfo(sym, MODE_POINT));
 }
 
+string getReward(string sym)
+{
+   double tickVal = MarketInfo(sym , MODE_TICKVALUE);
+   double tickSize = MarketInfo(sym , MODE_TICKSIZE);
+    
+   double amountReward = lotsGlobal * (tpPointsGlobal * MarketInfo(sym, MODE_POINT) * tickVal / tickSize);
+   return NormalizeDouble(amountReward, 2);
+}
+
+double getTPPips(string sym)
+{
+   double tpPips = (getTPPoints(sym) / 10);
+   return NormalizeDouble(tpPips, 2);
+}
+
 double getTPPoints(string sym)
 {
    return MathAbs(NormalizeDouble(tpGlobal - entryGlobal, MarketInfo(sym, MODE_DIGITS)) / MarketInfo(sym, MODE_POINT));
@@ -835,11 +859,17 @@ void checkDragObj(string sym)
    entryGlobal = NormalizeDouble(entry, MarketInfo(sym, MODE_DIGITS));
    tradeTypeGlobal = tradeType;   
    slPointsGlobal = getSLPoints(sym);
+   tpPointsGlobal = getTPPoints(sym);
    lotsGlobal = getLot(sym, slPointsGlobal);
+   
    
    ObjectCreate(0, "infoTrade", OBJ_LABEL, 0, 0 ,0);   
    ObjectSet("infoTrade", OBJPROP_CORNER, CORNER_RIGHT_UPPER);
    ObjectSet("infoTrade", OBJPROP_XDISTANCE, 50);
    ObjectSet("infoTrade", OBJPROP_YDISTANCE, 200);
    ObjectSetText("infoTrade", getTradeType(sym) + " " + lotsGlobal + "lots R:R" + getRR(sym) + " SL:" + getRisk(sym) + "$ " + getSLPips(sym) + "pips", 15, "Impact", Red);
+   
+   ObjectSetString( 0,"visualEntry", OBJPROP_TEXT, "          Entry " + getTradeType(sym) + " " + DoubleToString(lotsGlobal, 2) + "lots R:R" + getRR(sym));
+   ObjectSetString( 0,"visualSl", OBJPROP_TEXT, "          SL " + DoubleToString(getRisk(sym), 2) + "$ " + DoubleToString(getSLPips(sym), 2) + "pips");
+   ObjectSetString( 0,"visualTp", OBJPROP_TEXT, "          TP " + DoubleToString(getReward(sym), 2) + "$ " + DoubleToString(getTPPips(sym), 2) + "pips");
 }

@@ -201,7 +201,7 @@ void runTrading(string sym, int tradeType, double lot = 0)
    }
    
    if(getSecondsLeft() <= 10) {
-      Alert("secondsLeft: " + getSecondsLeft());
+      //Alert("secondsLeft: " + getSecondsLeft());
       return;
    }
 
@@ -811,7 +811,8 @@ void useHedge(string sym)
       closeTradingByTradeType(sym, closeType);
       
       string commentOrder = getCommentOrder(); 
-      int checkOrder = -1;    
+      int checkOrder = -1;
+      int tmpI = 1;  
       while(true) {
          double volumeMax = SymbolInfoDouble(sym,SYMBOL_VOLUME_MAX);
          while (hedgeLot > volumeMax) {            
@@ -825,6 +826,12 @@ void useHedge(string sym)
          }
          Alert("Error: " + GetLastError());
          Sleep(100);
+         tmpI = tmpI + 1;
+         if (tmpI >= 10) {
+            closeAll(sym);
+            resetGlobal();
+            break;
+         }
       }      
    }
 }
@@ -990,7 +997,7 @@ void resetGlobal()
    setLastLot();
    removeDrawTPLine();
    
-   Alert("resetGlobal()");
+   //Alert("resetGlobal()");
 }
 
 void checkDrawTPLine(string sym)
@@ -1226,7 +1233,7 @@ bool checkActiveHours()
    if ((StartHour > LastHour) && (((Hour() >= LastHour) && (Hour() <= 23)) || ((Hour() <= StartHour) && (Hour() > 0))))
       OperationsAllowed = true;
       
-      Alert(OperationsAllowed);
+      //Alert(OperationsAllowed);
    return OperationsAllowed;
 }
 

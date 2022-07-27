@@ -17,12 +17,12 @@ bool allowTrade = true;
 int magic = 12444;
 ENUM_TIMEFRAMES timeframe = 0;
 extern double risk = 0.4;
-extern double reward = 0.1;
+extern double reward = 0.4;
 extern double SLByPips = 18;
 double breakEven = 99999;
 int minSLPoints = 0;
 int maxSLPoints = 9999;
-double maxSpreadPoints = 300;
+extern double maxSpreadPoints = 6;
 //extern bool combineMartingale = true;
 string ASCTrendName = "ASCTrend1i-Alert";
 //double currentLossTrade = 0; //v1.1 change global 
@@ -71,7 +71,7 @@ enum ENUM_HOUR
    h23 = 23, // 23:00
 };
 
-input ENUM_HOUR StartHour = h07; // Start operation hour
+input ENUM_HOUR StartHour = h02; // Start operation hour
 input ENUM_HOUR LastHour = h22; // Last operation hour
 
 int OnInit()
@@ -275,7 +275,7 @@ double getLot(string sym, double SLPoints)
     if(SLPoints != 0 && tickSize != 0 && tickVal != 0) {
     SLPoints = SLPoints * MarketInfo(sym, MODE_POINT);
       lotSize = amountRisk / (SLPoints * tickVal / tickSize);
-      Alert("lotSize=amountRisk/(SLPoints*tickVal/tickSize) - " + lotSize + "=" + amountRisk + "/" + "(" + SLPoints + "*" + tickVal + "/" + tickSize + ")");
+      //Alert("lotSize=amountRisk/(SLPoints*tickVal/tickSize) - " + lotSize + "=" + amountRisk + "/" + "(" + SLPoints + "*" + tickVal + "/" + tickSize + ")");
     } else {
       return 0;
     }

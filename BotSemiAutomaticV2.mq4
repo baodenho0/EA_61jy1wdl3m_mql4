@@ -621,7 +621,7 @@ void closeTradingByProfit(string sym)
    || AccountProfit() + getCurrentLossTrade() >= 0 && getCountCurrentLossTrade() >= totalOrderBreakeven
    ) {
       closeAll(sym);
-      Alert("closeTradingByProfit()");
+      //Alert("closeTradingByProfit()");
    }
 }
 

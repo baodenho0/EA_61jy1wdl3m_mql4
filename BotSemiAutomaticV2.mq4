@@ -71,7 +71,7 @@ enum ENUM_HOUR
    h23 = 23, // 23:00
 };
 
-input ENUM_HOUR StartHour = h02; // Start operation hour
+input ENUM_HOUR StartHour = h01; // Start operation hour
 input ENUM_HOUR LastHour = h22; // Last operation hour
 
 int OnInit()
@@ -158,17 +158,15 @@ void OnDeinit(const int reason)
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
 void OnTick()
-  {
-  if(AccountBalance() <= 0) {
-   return;
-  }
+{
+   if(AccountBalance() <= 0) {
+      return;
+   }
   
    string sym = Symbol();
    int tradeType = -1;
    // commentReport();
-   if(checkActiveHours()) {
-      checkRun(sym);
-   }   
+   
    drawButton(sym);  
    checkDrawTPLine(sym);   
    checkDrawSLLine(sym);
@@ -176,6 +174,7 @@ void OnTick()
    closeTradingByProfit(sym);
    useHedge(sym);
    forceCloseAll(sym);
+   checkRun(sym);
    /*
    if(tradeTime == iTime(sym, timeframe, 0) || OrdersTotal() > 0) {
       return;
@@ -199,11 +198,12 @@ void runTrading(string sym, int tradeType, double lot = 0)
       //Alert("Cannot trade");
       return;
    }
-   
+   /*
    if(getSecondsLeft() <= 10) {
       //Alert("secondsLeft: " + getSecondsLeft());
       return;
    }
+   */
 
    double entry = 0;
    color tradeColor = clrBlue;
@@ -645,8 +645,11 @@ void closeTradingByTradeType(string sym, int tradeType)
                closePrice = askPrice;
             }   
          
-            orderProfit = OrderProfit();
+            orderProfit = OrderProfit() + OrderCommission();
             bool checkClose = OrderClose(OrderTicket() , OrderLots(), closePrice, slippage);
+            if(OrderSelect(OrderTicket(), SELECT_BY_TICKET, MODE_HISTORY)) {
+               orderProfit = OrderProfit() + OrderCommission();
+            }
             if(checkClose) {
                break;
             }
@@ -797,8 +800,13 @@ void useHedge(string sym)
       if (tmpLastLot) {
          lastLot = tmpLastLot;
       }
+      
       double hedgeLot = lastLot * ratioMartingale;
-      setLastLot(hedgeLot);
+      double volumeMax = SymbolInfoDouble(sym,SYMBOL_VOLUME_MAX);      
+      if (hedgeLot > volumeMax) {
+         setLastLot(hedgeLot);
+      }
+      
       if(lastLot == 0.01) {
          hedgeLot = 0.02;
       }      
@@ -812,27 +820,20 @@ void useHedge(string sym)
       
       string commentOrder = getCommentOrder(); 
       int checkOrder = -1;
-      int tmpI = 1;  
-      while(true) {
-         double volumeMax = SymbolInfoDouble(sym,SYMBOL_VOLUME_MAX);
-         while (hedgeLot > volumeMax) {            
-            checkOrder = OrderSend(sym, hedgeType, volumeMax, hedgeEntry, slippage, 0, 0, commentOrder, magic, 0); 
-            hedgeLot = hedgeLot - volumeMax;              
+      
+      while (hedgeLot > volumeMax) {
+         checkOrder = OrderSend(sym, hedgeType, volumeMax, hedgeEntry, slippage, 0, 0, commentOrder, magic, 0, clrMagenta); 
+         if(checkOrder < 0) {
+            handleErrorHedge(sym, hedgeType, volumeMax, hedgeEntry, commentOrder);
          }
+         hedgeLot = hedgeLot - volumeMax;              
+      }
          
-         checkOrder = OrderSend(sym, hedgeType, hedgeLot, hedgeEntry, slippage, 0, 0, commentOrder, magic, 0);
-         if(checkOrder >= 0) {
-            break;
-         }
-         Alert("Error: " + GetLastError());
-         Sleep(100);
-         tmpI = tmpI + 1;
-         if (tmpI >= 10) {
-            closeAll(sym);
-            resetGlobal();
-            break;
-         }
-      }      
+      checkOrder = OrderSend(sym, hedgeType, hedgeLot, hedgeEntry, slippage, 0, 0, commentOrder, magic, 0, clrMagenta);
+      if(checkOrder < 0) {
+         handleErrorHedge(sym, hedgeType, hedgeLot, hedgeEntry, commentOrder);
+      }
+      
    }
 }
 
@@ -870,7 +871,7 @@ void drawButton(string sym)
    ObjectSet("currentLossTrade", OBJPROP_XDISTANCE, 50);
    ObjectSet("currentLossTrade", OBJPROP_YDISTANCE, 240);
    ObjectSetText("currentLossTrade", "Current Loss Trade: " + getCurrentLossTrade() + "(" + getCountCurrentLossTrade() + ")", 15, "Impact", Red);
-
+   /*
    ObjectCreate(currentChartId, "BuyBtn", OBJ_BUTTON, 0, 0 ,0);   
    ObjectSetInteger(currentChartId, "BuyBtn", OBJPROP_XDISTANCE, 300);
    ObjectSetInteger(currentChartId, "BuyBtn", OBJPROP_XSIZE, 100);
@@ -897,7 +898,7 @@ void drawButton(string sym)
    ObjectSetInteger(currentChartId, "CloseAllBtn", OBJPROP_CORNER, 3);
    ObjectSetString(currentChartId, "CloseAllBtn", OBJPROP_TEXT, "CLOSE ALL");
    ObjectSetInteger(currentChartId, "CloseAllBtn", OBJPROP_BGCOLOR, clrWhiteSmoke);   
-
+   */
    ObjectCreate(currentChartId, "resetGlobalBtn", OBJ_BUTTON, 0, 0 ,0);   
    ObjectSetInteger(currentChartId, "resetGlobalBtn", OBJPROP_XDISTANCE, 20);
    ObjectSetInteger(currentChartId, "resetGlobalBtn", OBJPROP_XSIZE, 130);
@@ -1170,6 +1171,9 @@ int getSecondsLeft()
 
 void checkRun(string sym)
 {
+   if (!checkActiveHours()) {
+      return;
+   }
    double openPrice = iOpen(sym, timeframe, 1);
    double closePrice = iClose(sym, timeframe, 1);
    double hightPrice = iHigh(sym, timeframe, 1);
@@ -1239,8 +1243,37 @@ bool checkActiveHours()
 
 void forceCloseAll(string sym)
 {  
-   if (AccountBalance() / AccountEquity() >= ratioForceClose) {
+   double spread = MarketInfo(sym, MODE_SPREAD);
+   if (OrdersTotal() > 0 && (AccountBalance() / AccountEquity() >= ratioForceClose || spread > maxSpreadPoints)) {      
+      Alert("forceCloseAll() => AccountBalance(): " + AccountBalance() + " AccountEquity(): " + AccountEquity() + " spread: " + spread);
       closeAll(sym);
-      resetGlobal();
    }   
+}
+
+void handleErrorHedge(string sym, int hedgeType, double lots, double hedgeEntry, string commentOrder)
+{
+   Alert("handleErrorHedge()");
+   double tmpHedgeEntry = -1;
+   int tmpHedgeType = -1;
+   if(hedgeType == OP_BUYSTOP) {
+      tmpHedgeEntry = MarketInfo(sym, MODE_ASK);
+      tmpHedgeType = OP_BUY;
+   } else if(hedgeType == OP_SELLSTOP) {
+      tmpHedgeEntry = MarketInfo(sym, MODE_BID);
+      tmpHedgeType = OP_SELL;
+   }
+   
+   double checkDistance = MathAbs(NormalizeDouble(hedgeEntry - tmpHedgeEntry, MarketInfo(sym, MODE_DIGITS)) / MarketInfo(sym, MODE_POINT));
+   if (checkDistance > maxSpreadPoints) {
+      closeAll(sym);
+      Alert("bug => checkDistance: " + checkDistance);
+      return;
+   }
+   
+   int checkOrder =  OrderSend(sym, tmpHedgeType, lots, tmpHedgeEntry, slippage, 0, 0, commentOrder, magic, 0, clrMagenta);
+   if(checkOrder < 0) {
+      closeAll(sym);
+      Alert("Error: " + GetLastError());
+      return;
+   } 
 }

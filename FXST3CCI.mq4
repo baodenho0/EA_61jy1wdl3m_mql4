@@ -22,6 +22,8 @@ string globalRandom = "_j7a2zwqfp4_FXST3CCI";
 int SLpoints = 0;
 int TPpoints = 0;
 int TPprice = 9999999;
+extern int maxTotalOrder = 50;
+extern int maxLoss = -50;
 
 int OnInit()
   {
@@ -46,7 +48,7 @@ void OnDeinit(const int reason)
 void OnTick()
   {
       string sym = Symbol();
-      //forceCloseAll(sym);
+      forceCloseAll(sym);
       drawButton(sym);
       calculateDrawdown();
       if(tradeTime == iTime(sym, timeframe, 0)) {
@@ -393,7 +395,7 @@ void closeAll(string sym)
    double bidPrice = MarketInfo(sym, MODE_BID);
    double askPrice = MarketInfo(sym, MODE_ASK);
    int orderTotal = OrdersTotal();
-   
+   /*
    while(true) {
        if(OrderSelect(0, SELECT_BY_POS, MODE_TRADES)) {
             if(OrderType() == OP_BUY) {
@@ -409,13 +411,37 @@ void closeAll(string sym)
          break;
        }
    }
+   */
+   for(int i = OrdersTotal() - 1; i >= 0; i--) {
+      if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {                     
+         
+         while(true) {
+            bidPrice = MarketInfo(sym, MODE_BID);
+            askPrice = MarketInfo(sym, MODE_ASK);
+         
+            if(OrderType() == OP_BUY) {
+               closePrice = bidPrice;
+            } else if(OrderType() == OP_SELL) {
+               closePrice = askPrice;
+            }   
+         
+            bool checkClose = OrderClose(OrderTicket() , OrderLots(), closePrice, slippage);
+            if(checkClose) {
+               break;
+            }
+            //Alert("Error: " + GetLastError() + " | slippage: " + slippage);            
+         }        
+      }
+   }
 
    resetGlobal();
 }
 
 void forceCloseAll(string sym)
 {  
-   if (AccountProfit() >= TPprice) {
+   if (OrdersTotal() >= maxTotalOrder && AccountProfit() >= maxLoss
+      //|| OrdersTotal() >= 100 &&AccountProfit() >= -150
+   ) {
       closeAll(sym);
    }   
 }

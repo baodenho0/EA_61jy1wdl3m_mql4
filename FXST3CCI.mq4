@@ -19,6 +19,9 @@ extern double lots = 0.01;
 extern double dailyDrawdown = 0.045;
 extern double limitMaxDrawdown = 8800;
 string globalRandom = "_j7a2zwqfp4_FXST3CCI";
+int SLpoints = 0;
+int TPpoints = 0;
+int TPprice = 9999999;
 
 int OnInit()
   {
@@ -43,6 +46,7 @@ void OnDeinit(const int reason)
 void OnTick()
   {
       string sym = Symbol();
+      //forceCloseAll(sym);
       drawButton(sym);
       calculateDrawdown();
       if(tradeTime == iTime(sym, timeframe, 0)) {
@@ -127,6 +131,15 @@ void runTrading(string sym, int tradeType, double lot = 0)
    TP = NormalizeDouble(TP, MarketInfo(sym, MODE_DIGITS));
    double SLPoints = MathAbs(NormalizeDouble(entry - SL, MarketInfo(sym, MODE_DIGITS)) / MarketInfo(sym, MODE_POINT));
    */
+   if (SLpoints != 0 ) {
+      SL = getSLByPips(sym, tradeType, entry);
+      SL = NormalizeDouble(SL, MarketInfo(sym, MODE_DIGITS));
+   }
+   
+   if (TPpoints != 0 ) {
+      TP = getTPByPips(sym, tradeType, entry);    
+      TP = NormalizeDouble(TP, MarketInfo(sym, MODE_DIGITS));
+   }   
    
    entry = NormalizeDouble(entry, MarketInfo(sym, MODE_DIGITS));
    
@@ -143,7 +156,63 @@ void runTrading(string sym, int tradeType, double lot = 0)
 
 double getLot(string sym)
 {
-   return lots;
+   double tmpLots = lots;
+   switch(OrdersTotal()) 
+   { 
+   case 2: 
+      tmpLots = 0.02;
+      break; 
+   case 3: 
+      tmpLots = 0.03;
+      break; 
+   case 4: 
+      tmpLots = 0.04;
+      break; 
+   case 5: 
+      tmpLots = 0.07;
+      break;
+   case 6: 
+      tmpLots = 0.10;
+      break;   
+   case 7: 
+      tmpLots = 0.17;
+      break;   
+   case 8: 
+      tmpLots = 0.27;
+      break;   
+   case 9: 
+      tmpLots = 0.43;
+      break;
+   case 10: 
+      tmpLots = 0.69;
+      break; 
+   case 11: 
+      tmpLots = 1.10;
+      break;  
+   case 12: 
+      tmpLots = 1.76;
+      break; 
+   case 13: 
+      tmpLots = 2.81;
+      break;
+   case 14: 
+      tmpLots = 4.56;
+      break;
+   case 15: 
+      tmpLots = 7.37;
+      break;         
+  }
+  tmpLots = lots;
+  if (OrdersTotal() > 5) {
+      tmpLots = tmpLots * 2;
+  }
+  
+  if (OrdersTotal() > 15) {
+      tmpLots = tmpLots * 1.5;
+  }
+  tmpLots = lots;
+  return tmpLots;
+      
 }
 
 void closeTradingByTradeType(string sym, int tradeType)
@@ -318,3 +387,59 @@ void resetGlobal()
    setLimitDayDrawdown();
 }
 
+void closeAll(string sym)
+{
+   double closePrice;
+   double bidPrice = MarketInfo(sym, MODE_BID);
+   double askPrice = MarketInfo(sym, MODE_ASK);
+   int orderTotal = OrdersTotal();
+   
+   while(true) {
+       if(OrderSelect(0, SELECT_BY_POS, MODE_TRADES)) {
+            if(OrderType() == OP_BUY) {
+               closePrice = bidPrice;
+            } else if(OrderType() == OP_SELL) {
+               closePrice = askPrice;
+            } else {
+               OrderDelete(OrderTicket());
+            }
+            
+           OrderClose(OrderTicket(), OrderLots(), closePrice, slippage);
+       } else {
+         break;
+       }
+   }
+
+   resetGlobal();
+}
+
+void forceCloseAll(string sym)
+{  
+   if (AccountProfit() >= TPprice) {
+      closeAll(sym);
+   }   
+}
+
+double getSLByPips(string sym, int tradeType, double entry)
+{
+   double tmpSL = 0;   
+   if(tradeType == OP_BUY) {      
+     tmpSL = entry - SLpoints * MarketInfo(sym, MODE_POINT);
+   } else if(tradeType == OP_SELL) { 
+     tmpSL = entry + SLpoints * MarketInfo(sym, MODE_POINT);
+   }
+   
+   return (tmpSL);
+}
+
+double getTPByPips(string sym, int tradeType, double entry)
+{
+   double tmpTP = 0;   
+   if(tradeType == OP_BUY) {      
+     tmpTP = entry + TPpoints * MarketInfo(sym, MODE_POINT);
+   } else if(tradeType == OP_SELL) { 
+     tmpTP = entry - TPpoints * MarketInfo(sym, MODE_POINT);
+   }
+   
+   return (tmpTP);
+}

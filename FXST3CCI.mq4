@@ -16,14 +16,19 @@ ENUM_TIMEFRAMES timeframe = PERIOD_CURRENT;
 int slippage = 1;
 datetime tradeTime;
 extern double lots = 0.01;
-extern double dailyDrawdown = 0.045;
+extern double dailyDrawdown = 0.02;
 extern double limitMaxDrawdown = 8800;
 string globalRandom = "_j7a2zwqfp4_FXST3CCI";
 int SLpoints = 0;
 int TPpoints = 0;
 int TPprice = 9999999;
 extern int maxTotalOrder = 50;
-extern int maxLoss = -50;
+extern double maxLoss = 0.012;
+extern int totalXLot = 5;
+extern double xLot = 2.1;
+extern int totalXLot1 = 6;
+extern double xLot1 = 2.1;
+//extern int maxLossPoints = 2900;
 
 int OnInit()
   {
@@ -46,7 +51,7 @@ void OnDeinit(const int reason)
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
 void OnTick()
-  {
+  {      
       string sym = Symbol();
       forceCloseAll(sym);
       drawButton(sym);
@@ -108,6 +113,10 @@ int checkFx_Sniper_CCI_T3_New(string sym)
 
 void runTrading(string sym, int tradeType, double lot = 0) 
 {
+   if (Hour() <= 1 || Hour() >= 23 || getAllowTrade() == 1) {
+         return;
+   }
+      
    double entry = 0;
    color tradeColor = clrBlue;
    double SL = 0;
@@ -205,14 +214,14 @@ double getLot(string sym)
       break;         
   }
   tmpLots = lots;
-  if (OrdersTotal() > 5) {
-      tmpLots = tmpLots * 2;
+  if (OrdersTotal() > totalXLot) {
+      tmpLots = tmpLots * xLot;
   }
-  
-  if (OrdersTotal() > 15) {
-      tmpLots = tmpLots * 1.5;
+
+  if (OrdersTotal() > totalXLot1) {
+      tmpLots = tmpLots * xLot1;
   }
-  tmpLots = lots;
+
   return tmpLots;
       
 }
@@ -329,7 +338,9 @@ int getLastTradeType(string sym)
 
 void calculateDrawdown()
 {
+   Alert(getLimitDayDrawdown());
    if (Hour() == 00 || getLimitDayDrawdown() == 0) {
+      resetGlobal();
       setLimitDayDrawdown(AccountEquity() - (AccountEquity() * dailyDrawdown));
    }
    
@@ -377,9 +388,19 @@ double getLimitDayDrawdown()
    return GlobalVariableGet("LimitDayDrawdown" + globalRandom);
 }
 
-void setLimitDayDrawdown(int value = 0)
+void setLimitDayDrawdown(double value = 0)
 {
    GlobalVariableSet("LimitDayDrawdown" + globalRandom, value);
+}
+
+int getAllowTrade()
+{
+   return GlobalVariableGet("AllowTrade" + globalRandom);
+}
+
+void setAllowTrade(int value = 0)
+{
+   GlobalVariableSet("AllowTrade" + globalRandom, value);
 }
 
 void resetGlobal()
@@ -387,6 +408,7 @@ void resetGlobal()
    setCheckDayDrawdown();  
    setCheckMaxDrawdown(); 
    setLimitDayDrawdown();
+   setAllowTrade();
 }
 
 void closeAll(string sym)
@@ -433,16 +455,28 @@ void closeAll(string sym)
          }        
       }
    }
-
-   resetGlobal();
 }
 
 void forceCloseAll(string sym)
 {  
-   if (OrdersTotal() >= maxTotalOrder && AccountProfit() >= maxLoss
-      //|| OrdersTotal() >= 100 &&AccountProfit() >= -150
+   /*
+   if(OrderSelect(0, SELECT_BY_POS, MODE_TRADES)) {
+      double checkDistanceEntry = MathAbs(OrderOpenPrice() - MarketInfo(sym, MODE_ASK)) / MarketInfo(sym, MODE_POINT);      
+      if (checkDistanceEntry > maxLossPoints) {
+         closeAll(sym);
+         setAllowTrade(1);
+      }
+   }
+   */
+
+   if (OrdersTotal() >= maxTotalOrder && AccountProfit() >= (AccountBalance() * maxLoss * -1)
+      || Hour() >= 21 && Hour() <= 24 && AccountProfit() >= 0
+      || Hour() >= 22 && Hour() <= 24 && AccountProfit() >= (AccountBalance() * maxLoss * -1)
+      || AccountEquity() < getLimitDayDrawdown()
+      || Hour() >= 23 && Hour() <= 24
    ) {
       closeAll(sym);
+      setAllowTrade(1);
    }   
 }
 

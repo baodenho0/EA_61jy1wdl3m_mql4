@@ -15,25 +15,63 @@ extern string Fx_Sniper_CCI_T3_New = "Fx_Sniper_CCI_T3_New";
 ENUM_TIMEFRAMES timeframe = PERIOD_CURRENT;
 int slippage = 1;
 datetime tradeTime;
-extern double lots = 0.01;
-extern double dailyDrawdown = 0.02;
+extern int maxSpread = 15;
+extern double lots = 0.04;
+extern double dailyDrawdown = 0.025;
 extern double limitMaxDrawdown = 8800;
 string globalRandom = "_j7a2zwqfp4_FXST3CCI";
 int SLpoints = 0;
 int TPpoints = 0;
 int TPprice = 9999999;
-extern int maxTotalOrder = 50;
-extern double maxLoss = 0.012;
+extern int maxTotalOrder = 30;
+extern double maxLoss = 0.011;
 extern int totalXLot = 5;
 extern double xLot = 2.1;
 extern int totalXLot1 = 6;
 extern double xLot1 = 2.1;
 //extern int maxLossPoints = 2900;
+extern int consecutiveWins = 2;
+int forceStopTradeType = -1;
+extern double closeProfit = 10;
+
+//==========
+int a1 = 0;
+int a2 = 0;
+int a3 = 0;
+int a4 = 0;
+int a5 = 0;
+int a6 = 0;
+int a7 = 0;
+int a8 = 0;
+int a9 = 0;
+int a10 = 0;
+int a11 = 0;
+int a12 = 0;
+int a13 = 0;
+int a14 = 0;
+int a15 = 0;
+int a16 = 0;
+int a17 = 0;
+int a18 = 0;
+int a19 = 0;
+int a20 = 0;
+int a21 = 0;
+int a22 = 0;
+int a23 = 0;
+int a24 = 0;
+int a25 = 0;
+int arrCountForceCloseAll[];
 
 int OnInit()
   {
 //---
      if (IsTesting()) {
+         
+         ArrayFree(arrCountForceCloseAll);
+         
+         ArrayResize(arrCountForceCloseAll, 0,0);
+         Alert(ArraySize(arrCountForceCloseAll));
+         
          resetGlobal();
      }
 //---
@@ -45,7 +83,37 @@ int OnInit()
 void OnDeinit(const int reason)
   {
 //---
-   
+      
+      Alert("1: " + a1);
+      Alert("2: " + a2);
+      Alert("3: " + a3);
+      Alert("4: " + a4);
+      Alert("5: " + a5);
+      Alert("6: " + a6);
+      Alert("7: " + a7);
+      Alert("8: " + a8);
+      Alert("9: " + a9);
+      Alert("10: " + a10);
+      Alert("11: " + a11);
+      Alert("12: " + a12);
+      Alert("13: " + a13);
+      Alert("14: " + a14);
+      Alert("15: " + a15);
+      Alert("16: " + a16);
+      Alert("17: " + a17);
+      Alert("18: " + a18);
+      Alert("19: " + a19);
+      Alert("20: " + a20);
+      Alert("21: " + a11);
+      Alert("22: " + a12);
+      Alert("23: " + a13);
+      Alert("24: " + a14);
+      Alert("25: " + a25);
+      Alert("=======");
+      Alert("arrCountForceCloseAll: " + ArraySize(arrCountForceCloseAll));
+      
+      showForceClose();
+      
   }
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
@@ -54,6 +122,7 @@ void OnTick()
   {      
       string sym = Symbol();
       forceCloseAll(sym);
+      checkCloseProfit(sym);
       drawButton(sym);
       calculateDrawdown();
       if(tradeTime == iTime(sym, timeframe, 0)) {
@@ -79,14 +148,30 @@ void checkRun(string sym)
    } else if (tradeType == OP_SELL) {
       closeType = OP_BUY;
    }   
-   
-   if (AccountProfit() > 0) {
-      closeTradingByTradeType(sym, closeType);
+   /*
+   if (AccountProfit() > 0 && closeProfit == 0) {
+      closeTradingByTradeType(sym, closeType);      
    }
-   
+   */
+   /*
    if (tradeType == -1 || (lastTradeType != -1 && lastTradeType != tradeType)) {
       return;
-   }   
+   }
+    
+   if (forceStopTradeType != tradeType) {
+      forceStopTradeType = -1;
+   }
+  
+   if (OrdersTotal() == 0 && (checkConsecutiveTradeType(sym) || forceStopTradeType == tradeType)) {
+         forceStopTradeType = tradeType;
+         if (AccountProfit() >= 0) {
+            closeAll(sym);
+         }         
+         return;
+   }
+   */
+   
+   
    runTrading(sym, tradeType);
 }
 
@@ -100,7 +185,7 @@ int checkFx_Sniper_CCI_T3_New(string sym)
    double down = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, 13,13,0.3,3,100, 3, 0);
    double down1 = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, 13,13,0.3,3,100, 10, 1);
    
-   Alert("up: " + up + " up1: " + up1 + " | down: " + down + " down1: " + down1);
+   //Alert("up: " + up + " up1: " + up1 + " | down: " + down + " down1: " + down1);
    
    if ((down > 0 && down < 500) || (down1 > 0 && down1 < 500)) {
       tradeType = OP_SELL;
@@ -113,8 +198,14 @@ int checkFx_Sniper_CCI_T3_New(string sym)
 
 void runTrading(string sym, int tradeType, double lot = 0) 
 {
-   if (Hour() <= 1 || Hour() >= 23 || getAllowTrade() == 1) {
+   /*
+   if (Hour() <= 1 || Hour() >= 23) {
          return;
+   }
+   */
+
+   if (getAllowTrade() == 1 || MarketInfo(sym, MODE_SPREAD) > maxSpread) {
+      return;
    }
       
    double entry = 0;
@@ -160,7 +251,11 @@ void runTrading(string sym, int tradeType, double lot = 0)
    }
    
    if(entry && lot > 0) {
-      string commentOrder = "";
+      string commentOrder = ""; //Alert("getCountConsecutiveWins:" + getCountConsecutiveWins());
+      if (getCountConsecutiveWins() == consecutiveWins) {
+         lot = lot * 2.1;
+         setCountConsecutiveWins();
+      }
       OrderSend(sym, tradeType, lot, entry, slippage, SL, TP, commentOrder, magic, 0, tradeColor);      
    }
 }
@@ -213,7 +308,15 @@ double getLot(string sym)
       tmpLots = 7.37;
       break;         
   }
+  
   tmpLots = lots;
+  
+  double lastLots = getLastLots(sym);
+  
+  if (lastLots) {
+      tmpLots = lastLots;
+  }
+  
   if (OrdersTotal() > totalXLot) {
       tmpLots = tmpLots * xLot;
   }
@@ -231,6 +334,8 @@ void closeTradingByTradeType(string sym, int tradeType)
    double closePrice; 
    double bidPrice;
    double askPrice;
+   bool checkTrue = false;
+   int ordersTotal = OrdersTotal();
    
    for(int i = OrdersTotal() - 1; i >= 0; i--) {
       if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES) && tradeType == OrderType()) {                     
@@ -247,11 +352,18 @@ void closeTradingByTradeType(string sym, int tradeType)
          
             bool checkClose = OrderClose(OrderTicket() , OrderLots(), closePrice, slippage);
             if(checkClose) {
+               checkTrue = true;
                break;
             }
-            //Alert("Error: " + GetLastError() + " | slippage: " + slippage);            
+            //Alert("Error: " + GetLastError() + " | slippage: " + slippage);   
+                    
          }        
       }
+   }
+   
+   if (checkTrue) {
+      setCountConsecutiveWins(getCountConsecutiveWins() + 1);
+      saveRP(ordersTotal);      
    }
 }
 
@@ -336,12 +448,29 @@ int getLastTradeType(string sym)
    return tradeType;
 }
 
+int getLastLots(string sym)
+{
+   int tmpLots = 0;
+   
+   if (OrderSelect(0, SELECT_BY_POS, MODE_TRADES)) {
+      tmpLots = OrderLots();
+   }
+   
+   return tmpLots;
+}
+
 void calculateDrawdown()
 {
-   Alert(getLimitDayDrawdown());
+   //Alert(getLimitDayDrawdown());
    if (Hour() == 00 || getLimitDayDrawdown() == 0) {
       resetGlobal();
-      setLimitDayDrawdown(AccountEquity() - (AccountEquity() * dailyDrawdown));
+      double account = 0;
+      if (AccountBalance() > AccountEquity()) {
+         account = AccountBalance();
+      } else {
+         account = AccountEquity();
+      }
+      setLimitDayDrawdown(account - (account * dailyDrawdown));
    }
    
    if (AccountEquity() < getLimitDayDrawdown()) {
@@ -403,12 +532,23 @@ void setAllowTrade(int value = 0)
    GlobalVariableSet("AllowTrade" + globalRandom, value);
 }
 
+int getCountConsecutiveWins()
+{
+   return GlobalVariableGet("CountConsecutiveWins" + globalRandom);
+}
+
+void setCountConsecutiveWins(int value = 0)
+{
+   GlobalVariableSet("CountConsecutiveWins" + globalRandom, value);
+}
+
 void resetGlobal()
 {
    setCheckDayDrawdown();  
    setCheckMaxDrawdown(); 
    setLimitDayDrawdown();
    setAllowTrade();
+   setCountConsecutiveWins();
 }
 
 void closeAll(string sym)
@@ -457,7 +597,7 @@ void closeAll(string sym)
    }
 }
 
-void forceCloseAll(string sym)
+void forceCloseAll(string sym, int force = false)
 {  
    /*
    if(OrderSelect(0, SELECT_BY_POS, MODE_TRADES)) {
@@ -468,15 +608,24 @@ void forceCloseAll(string sym)
       }
    }
    */
-
-   if (OrdersTotal() >= maxTotalOrder && AccountProfit() >= (AccountBalance() * maxLoss * -1)
+   
+   int orderTotal = OrdersTotal();
+   double accountProfit = AccountProfit();
+   if (OrdersTotal() >= maxTotalOrder && AccountEquity() <= (AccountBalance() - (AccountBalance() * maxLoss))
       || Hour() >= 21 && Hour() <= 24 && AccountProfit() >= 0
       || Hour() >= 22 && Hour() <= 24 && AccountProfit() >= (AccountBalance() * maxLoss * -1)
-      || AccountEquity() < getLimitDayDrawdown()
-      || Hour() >= 23 && Hour() <= 24
+      || AccountEquity() <= getLimitDayDrawdown()
+      //|| Hour() >= 23 && Hour() <= 24
+      //|| AccountProfit() >= (AccountBalance() * TP)
+      || AccountEquity() <= (AccountBalance() - (AccountBalance() * dailyDrawdown))
+      || force == true
    ) {
       closeAll(sym);
       setAllowTrade(1);
+      
+      if (accountProfit < 0) {
+         arrayPush(arrCountForceCloseAll, orderTotal);
+      }      
    }   
 }
 
@@ -502,4 +651,121 @@ double getTPByPips(string sym, int tradeType, double entry)
    }
    
    return (tmpTP);
+}
+
+void saveRP(int ordersTotal)
+{
+   if (ordersTotal == 1) {
+      a1 = a1 + 1;
+   }if (ordersTotal == 2) {
+      a2 = a2 + 1;
+   }if (ordersTotal == 3) {  
+    a3 = a3 + 1;
+   }if (ordersTotal == 4) {
+     a4 = a4 + 1;
+   }if (ordersTotal == 5) {
+      a5 = a5 + 1;
+   }if (ordersTotal == 6) {
+      a6 = a6 + 1;
+   }if (ordersTotal == 7) {
+      a7 = a7 + 1;
+   }if (ordersTotal == 8) {
+     a8 = a8 + 1;
+   }if (ordersTotal == 9) {
+     a9 = a9 + 1;
+   }if (ordersTotal == 10) {
+     a10 = a10 + 1;
+   }if (ordersTotal == 11) {
+      a11 = a11 + 1;
+   }if (ordersTotal == 12) {
+     a12 = a12 + 1;
+   }if (ordersTotal == 13) {
+      a13 = a13 + 1;
+   }if (ordersTotal == 14) {
+      a14 = a14 + 1;
+   }if (ordersTotal == 15) {
+      a15 = a15 + 1;
+   }if (ordersTotal == 16) {
+      a16 = a16 + 1;
+   }if (ordersTotal == 17) {
+     a17 = a17 + 1;
+   }if (ordersTotal == 18) {
+      a18 = a18 + 1;
+   }if (ordersTotal == 19) {
+      a19 = a19 + 1;
+   }if (ordersTotal == 20) {
+      a20 = a20 + 1;
+   }
+}
+
+void arrayPush(int & array[] , double dataToPush){
+    int count = ArrayResize(array, ArraySize(array) + 1);
+    array[ArraySize(array) - 1] = dataToPush;
+}
+
+void showForceClose()
+{
+   ArraySort(arrCountForceCloseAll);
+   int tmpC = 1;
+   for(int i = 1; i <= ArraySize(arrCountForceCloseAll) - 1; i++) {
+      
+      if (arrCountForceCloseAll[i] == arrCountForceCloseAll[i - 1]) {
+         tmpC = tmpC + 1;
+      }  
+      if (arrCountForceCloseAll[i] != arrCountForceCloseAll[i - 1]) {
+         Alert(arrCountForceCloseAll[i] + "=>" + tmpC);
+         tmpC = 1;
+      } 
+   }
+}
+
+bool checkConsecutiveTradeType(string sym)
+{
+   bool result = false;   
+   double up = -1;
+   double up1 = -1;
+   double down = -1;
+   double down1 = -1;
+   int countUp = 0;
+   int countDown = 0;
+   
+   int i = 0;
+   while (true) {
+      up = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, 13,13,0.3,3,100, 4, i);
+      up1 = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, 13,13,0.3,3,100, 9, i);
+   
+      down = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, 13,13,0.3,3,100, 3, i);
+      down1 = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, 13,13,0.3,3,100, 10, i);
+   
+      if ((down > 0 && down < 500) || (down1 > 0 && down1 < 500)) {
+         countDown = countDown + 1;
+      } else if ((up < 0 && up > -500) || (up1 < 0 && up1 > -500)) {
+         countUp = countUp + 1;
+      }
+      
+      if (countUp >= 1 && countDown >= 1) {
+         break;
+      }
+      
+      if ((countUp == 4 && countDown == 0)
+         || (countUp == 0 && countDown == 4)
+      ) {
+         result = true;
+         break;
+      }
+      
+      i = i + 1;
+   }   
+   
+   return result;
+}
+
+void checkCloseProfit(string sym)
+{
+   int ordersTotal = OrdersTotal();
+   if (AccountProfit() >= closeProfit) {
+      closeAll(sym);
+      setCountConsecutiveWins(getCountConsecutiveWins() + 1);
+      saveRP(ordersTotal);   
+   }
 }

@@ -15,9 +15,8 @@ extern string Fx_Sniper_CCI_T3_New = "Fx_Sniper_CCI_T3_New";
 ENUM_TIMEFRAMES timeframe = PERIOD_CURRENT;
 int slippage = 1;
 datetime tradeTime;
-extern int maxSpread = 15;
 extern double lots = 0.04;
-extern double dailyDrawdown = 0.025;
+extern double dailyDrawdown = 0.03;
 extern double limitMaxDrawdown = 8800;
 string globalRandom = "_j7a2zwqfp4_FXST3CCI";
 int SLpoints = 0;
@@ -33,7 +32,12 @@ extern double xLot1 = 2.1;
 extern int consecutiveWins = 2;
 int forceStopTradeType = -1;
 extern double closeProfit = 10;
-
+string tmpDes = ""; //------Setup Fx_Sniper_CCI_T3_New------- 13,13,0.3,3,100
+int v1 = 13;//------Setup Fx_Sniper_CCI_T3_New------- 13,13,0.3,3,100
+int v2 = 13;//------Setup Fx_Sniper_CCI_T3_New------- 13,13,0.3,3,100
+double v3 = 0.3;//------Setup Fx_Sniper_CCI_T3_New------- 13,13,0.3,3,100
+int v4 = 3;//------Setup Fx_Sniper_CCI_T3_New------- 13,13,0.3,3,100
+int v5 = 100;//------Setup Fx_Sniper_CCI_T3_New------- 13,13,0.3,3,100
 //==========
 int a1 = 0;
 int a2 = 0;
@@ -148,16 +152,15 @@ void checkRun(string sym)
    } else if (tradeType == OP_SELL) {
       closeType = OP_BUY;
    }   
-   /*
+   
    if (AccountProfit() > 0 && closeProfit == 0) {
       closeTradingByTradeType(sym, closeType);      
    }
-   */
-   /*
+   
    if (tradeType == -1 || (lastTradeType != -1 && lastTradeType != tradeType)) {
       return;
    }
-    
+    /*
    if (forceStopTradeType != tradeType) {
       forceStopTradeType = -1;
    }
@@ -179,11 +182,11 @@ void checkRun(string sym)
 int checkFx_Sniper_CCI_T3_New(string sym)
 {
    int tradeType = -1;
-   double up = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, 13,13,0.3,3,100, 4, 0);
-   double up1 = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, 13,13,0.3,3,100, 9, 1);
+   double up = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, v1,v2,v3,v4,v5, 4, 0);
+   double up1 = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, v1,v2,v3,v4,v5, 9, 1);
    
-   double down = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, 13,13,0.3,3,100, 3, 0);
-   double down1 = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, 13,13,0.3,3,100, 10, 1);
+   double down = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, v1,v2,v3,v4,v5, 3, 0);
+   double down1 = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, v1,v2,v3,v4,v5, 10, 1);
    
    //Alert("up: " + up + " up1: " + up1 + " | down: " + down + " down1: " + down1);
    
@@ -198,14 +201,8 @@ int checkFx_Sniper_CCI_T3_New(string sym)
 
 void runTrading(string sym, int tradeType, double lot = 0) 
 {
-   /*
-   if (Hour() <= 1 || Hour() >= 23) {
+   if (Hour() <= 1 || Hour() >= 23 || getAllowTrade() == 1) {
          return;
-   }
-   */
-
-   if (getAllowTrade() == 1 || MarketInfo(sym, MODE_SPREAD) > maxSpread) {
-      return;
    }
       
    double entry = 0;
@@ -612,12 +609,14 @@ void forceCloseAll(string sym, int force = false)
    int orderTotal = OrdersTotal();
    double accountProfit = AccountProfit();
    if (OrdersTotal() >= maxTotalOrder && AccountEquity() <= (AccountBalance() - (AccountBalance() * maxLoss))
-      || Hour() >= 21 && Hour() <= 24 && AccountProfit() >= 0
-      || Hour() >= 22 && Hour() <= 24 && AccountProfit() >= (AccountBalance() * maxLoss * -1)
+      //|| Hour() >= 21 && Hour() <= 24 && AccountProfit() >= 0
+      || (Hour() >= 22 && Hour() <= 24 && AccountEquity() <= (AccountBalance() - (AccountBalance() * maxLoss)))
+      || OrdersTotal() > 5 && AccountProfit() >= 0
+      || OrdersTotal() > 5 //&& AccountProfit() >= 0
       || AccountEquity() <= getLimitDayDrawdown()
       //|| Hour() >= 23 && Hour() <= 24
       //|| AccountProfit() >= (AccountBalance() * TP)
-      || AccountEquity() <= (AccountBalance() - (AccountBalance() * dailyDrawdown))
+      //|| AccountEquity() <= (AccountBalance() - (AccountBalance() * dailyDrawdown))
       || force == true
    ) {
       closeAll(sym);
@@ -731,11 +730,11 @@ bool checkConsecutiveTradeType(string sym)
    
    int i = 0;
    while (true) {
-      up = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, 13,13,0.3,3,100, 4, i);
-      up1 = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, 13,13,0.3,3,100, 9, i);
+      up = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, v1,v2,v3,v4,v5, 4, i);
+      up1 = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, v1,v2,v3,v4,v5, 9, i);
    
-      down = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, 13,13,0.3,3,100, 3, i);
-      down1 = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, 13,13,0.3,3,100, 10, i);
+      down = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, v1,v2,v3,v4,v5, 3, i);
+      down1 = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, v1,v2,v3,v4,v5, 10, i);
    
       if ((down > 0 && down < 500) || (down1 > 0 && down1 < 500)) {
          countDown = countDown + 1;

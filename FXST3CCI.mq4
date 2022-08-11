@@ -33,6 +33,7 @@ extern int consecutiveWins = 2;
 int forceStopTradeType = -1;
 extern double closeProfit = 10;
 extern int trailingPoints = 20;
+extern int bigWave = 130;
 
 string tmpDes = ""; //------Setup Fx_Sniper_CCI_T3_New------- 13,13,0.3,3,100
 int v1 = 13;//------Setup Fx_Sniper_CCI_T3_New------- 13,13,0.3,3,100
@@ -162,11 +163,11 @@ void checkRun(string sym)
    if (tradeType == -1 || (lastTradeType != -1 && lastTradeType != tradeType)) {
       return;
    }
-    /*
+   
    if (forceStopTradeType != tradeType) {
       forceStopTradeType = -1;
    }
-  
+   /*
    if (OrdersTotal() == 0 && (checkConsecutiveTradeType(sym) || forceStopTradeType == tradeType)) {
          forceStopTradeType = tradeType;
          if (AccountProfit() >= 0) {
@@ -175,6 +176,14 @@ void checkRun(string sym)
          return;
    }
    */
+   
+   if ((checkBigWave(sym) || forceStopTradeType == tradeType)) {
+         forceStopTradeType = tradeType;
+         closeAll(sym);        
+         return;
+   }
+   
+   
    
    
    runTrading(sym, tradeType);
@@ -243,7 +252,13 @@ void runTrading(string sym, int tradeType, double lot = 0)
    }   
    
    entry = NormalizeDouble(entry, MarketInfo(sym, MODE_DIGITS));
-   
+   /*
+   if (OrdersTotal() >= 5) {
+      if (checkEntry(sym, entry, tradeType)) {
+         return;
+      }
+   } 
+   */  
    
    if(lot == 0) {
       lot = getLot(sym);
@@ -456,6 +471,17 @@ int getLastLots(string sym)
    }
    
    return tmpLots;
+}
+
+int getLastEntry(string sym)
+{
+   int tmpEntry = 0;
+   
+   if (OrderSelect(0, SELECT_BY_POS, MODE_TRADES)) {
+      tmpEntry = OrderOpenPrice();
+   }
+   
+   return tmpEntry;
 }
 
 void calculateDrawdown()
@@ -761,6 +787,17 @@ bool checkConsecutiveTradeType(string sym)
    return result;
 }
 
+bool checkBigWave(string sym)
+{
+   double check = iCustom(sym, timeframe, Fx_Sniper_CCI_T3_New, v1,v2,v3,v4,v5, 0, 1);
+   
+   if (check >= bigWave || check <= (bigWave * -1)) {
+      return true;
+   }
+   
+   return false;
+}
+
 void checkCloseProfit(string sym)
 {
    int ordersTotal = OrdersTotal();
@@ -802,4 +839,18 @@ void trailingStop(int TrailingOffsetPoints)
 
 double NormPrice(double Price) {
 	return NormalizeDouble(Price, Digits);
+}
+
+bool checkEntry(string sym, double entry, int tradeType)
+{
+   bool result = false;
+   double lastEntry = getLastEntry(sym);
+   
+   if (tradeType == OP_BUY && entry < lastEntry) {
+      result = true;
+   } else if (tradeType == OP_SELL && entry > lastEntry) {
+      result = true;
+   }
+    
+   return result;
 }

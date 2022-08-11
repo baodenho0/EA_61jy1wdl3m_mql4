@@ -32,6 +32,8 @@ extern double xLot1 = 2.1;
 extern int consecutiveWins = 2;
 int forceStopTradeType = -1;
 extern double closeProfit = 10;
+extern int trailingPoints = 20;
+
 string tmpDes = ""; //------Setup Fx_Sniper_CCI_T3_New------- 13,13,0.3,3,100
 int v1 = 13;//------Setup Fx_Sniper_CCI_T3_New------- 13,13,0.3,3,100
 int v2 = 13;//------Setup Fx_Sniper_CCI_T3_New------- 13,13,0.3,3,100
@@ -763,8 +765,41 @@ void checkCloseProfit(string sym)
 {
    int ordersTotal = OrdersTotal();
    if (AccountProfit() >= closeProfit) {
-      closeAll(sym);
-      setCountConsecutiveWins(getCountConsecutiveWins() + 1);
-      saveRP(ordersTotal);   
+      //closeAll(sym);
+      trailingStop(trailingPoints);
+      //setCountConsecutiveWins(getCountConsecutiveWins() + 1);
+      //saveRP(ordersTotal);   
    }
+}
+
+void trailingStop(int TrailingOffsetPoints) 
+{
+	for (int i = OrdersTotal() - 1; i >= 0; i--) {
+		if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+		   double orderStopLoss = OrderStopLoss();
+		   if (orderStopLoss == 0 && (OrderType() == OP_BUY)) {
+		      orderStopLoss = -1;
+		   } else if (orderStopLoss == 0 && (OrderType() == OP_SELL)) {
+		      orderStopLoss = 9999;
+		   }
+			if ((OrderType() == OP_BUY) && (NormPrice(Bid - orderStopLoss) > NormPrice(TrailingOffsetPoints * Point))) {
+			   Alert(NormPrice(Bid - TrailingOffsetPoints * Point) +"-"+ orderStopLoss);
+			   if (NormPrice(Bid - TrailingOffsetPoints * Point) <= orderStopLoss) {
+			      return;
+			   }
+				OrderModify(OrderTicket(), OrderOpenPrice(), NormPrice(Bid - TrailingOffsetPoints * Point), OrderTakeProfit(), OrderExpiration(), clrNONE);
+
+			} else if ((OrderType() == OP_SELL) && (NormPrice(orderStopLoss - Ask) > NormPrice(TrailingOffsetPoints * Point))) {
+            if (NormPrice(Ask + TrailingOffsetPoints * Point) >= orderStopLoss) {
+			      return;
+			   }
+            OrderModify(OrderTicket(), OrderOpenPrice(), NormPrice(Ask + TrailingOffsetPoints * Point), OrderTakeProfit(), OrderExpiration(), clrNONE);
+			}
+		}
+	}
+}
+
+
+double NormPrice(double Price) {
+	return NormalizeDouble(Price, Digits);
 }

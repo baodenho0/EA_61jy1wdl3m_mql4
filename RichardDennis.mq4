@@ -17,22 +17,25 @@ extern int DonchianChannelsTrailingStop = 10;
 extern string ATRTrailStop_v3 = "ATRTrailStop_v3";
 ENUM_TIMEFRAMES timeframe = PERIOD_CURRENT;
 datetime tradeTime;
-extern double dailyDrawdown = 0.03;
+extern double dailyDrawdown = 0.04;
 extern double limitMaxDrawdown = 8800;
 string globalRandom = "_fsdp4_RichardDennis";
 int magic = 921112;
-extern double risk = 0.5;
+extern double risk = 0.1;
 extern double reward = 1;
 double upperDonchianChannels;
 double lowerDonchianChannels;
 double upperDonchianChannelsTrailingStop;
 double lowerDonchianChannelsTrailingStop;
 extern bool swap = false;
+double totalLots = 0;
 
 int OnInit()
   {
 //---
-   
+   if (IsTesting()) {    
+         resetGlobal();
+   }
 //---
    return(INIT_SUCCEEDED);
   }
@@ -59,7 +62,7 @@ void OnTick()
       }
       tradeTime = iTime(sym, 0, 0);
       getDonchianChannels(sym);
-      trailingStop(sym);      
+      trailingTP(sym);     
       checkRun(sym);
   }
 //+------------------------------------------------------------------+
@@ -119,12 +122,17 @@ void runTrading(string sym, int tradeType, double lot = 0)
          SL = tmpSL;
                
          if (tradeType == OP_BUY) {
-            tradeType = OP_SELL;
+            tradeType = OP_SELL;            
+            entry = MarketInfo(sym, MODE_BID);
+            tradeColor = clrRed;
          } else if (tradeType == OP_SELL) {
             tradeType = OP_BUY;
+            entry = MarketInfo(sym, MODE_ASK);
+            tradeColor = clrBlue;
          }
       }
-      OrderSend(sym, tradeType, lot, entry, slippage, SL, TP, commentOrder, magic, 0, tradeColor);      
+      OrderSend(sym, tradeType, lot, entry, slippage, SL, TP, commentOrder, magic, 0, tradeColor);    
+      totalLots = totalLots + lot;
    }
 }
 
@@ -244,10 +252,6 @@ double getLot(string sym, double SLPoints)
 
 void trailingStop(string sym)
 {
-   if (swap == true) {
-      trailingTP(sym);
-      return;
-   }
    double upper = upperDonchianChannelsTrailingStop;
    double lower = lowerDonchianChannelsTrailingStop;
    double newSL = 0;      
@@ -319,6 +323,12 @@ void drawButton(string sym)
    long currentChartId = ChartID();  
    
    double spread = MarketInfo(sym, MODE_SPREAD);
+   
+   ObjectCreate(currentChartId, "totalLots", OBJ_LABEL, 0, 0 ,0);
+   ObjectSet("totalLots", OBJPROP_CORNER, CORNER_RIGHT_UPPER);
+   ObjectSet("totalLots", OBJPROP_XDISTANCE, 50);
+   ObjectSet("totalLots", OBJPROP_YDISTANCE, 120);
+   ObjectSetText("totalLots", "Lots: " + totalLots, 15, "Impact", Red);
    
    ObjectCreate(currentChartId, "showSpread", OBJ_LABEL, 0, 0 ,0);   
    ObjectSet("showSpread", OBJPROP_CORNER, CORNER_RIGHT_UPPER);
@@ -506,5 +516,6 @@ void closeAll(string sym)
       }
    }
 }
+
 
 

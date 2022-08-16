@@ -27,8 +27,10 @@ double upperDonchianChannels;
 double lowerDonchianChannels;
 double upperDonchianChannelsTrailingStop;
 double lowerDonchianChannelsTrailingStop;
-extern bool swap = false;
+extern bool swap = true;
 double totalLots = 0;
+extern int optimize = 1; // optimize 1: limit, 2: + spread
+extern ENUM_TIMEFRAMES ichiTrendTimeframe = PERIOD_M5;
 
 int OnInit()
   {
@@ -53,22 +55,30 @@ void OnDeinit(const int reason)
 void OnTick()
   {
 //---
-      string sym = Symbol();    
+      string sym = Symbol();
       drawButton(sym);
       forceCloseAll(sym);
+      checkCancel(sym);      
       calculateDrawdown();
       if(tradeTime == iTime(sym, timeframe, 0)) {
          return;      
       }
       tradeTime = iTime(sym, 0, 0);
       getDonchianChannels(sym);
-      trailingTP(sym);     
+      //trailingStop(sym);
+      if (swap == true) {
+         trailingTP(sym);  
+      }             
       checkRun(sym);
   }
 //+------------------------------------------------------------------+
 void checkRun(string sym)
 {
    int tradeType = checkDonchianChannels(sym);
+
+   if (OrdersTotal() == 0 && tradeType != checkIchimokuAndCandle(sym)) {
+      return;
+   }
    
    if (tradeType == -1) {
       return;
@@ -97,6 +107,9 @@ void runTrading(string sym, int tradeType, double lot = 0)
    } else {
       return;
    }   
+   if (optimize == 1 || optimize == 2) {
+      entry = MarketInfo(sym, MODE_BID);
+   }
 
    SL = getSL(sym, tradeType);
    if (!SL) {
@@ -129,6 +142,26 @@ void runTrading(string sym, int tradeType, double lot = 0)
             tradeType = OP_BUY;
             entry = MarketInfo(sym, MODE_ASK);
             tradeColor = clrBlue;
+         }
+         if (optimize == 1) {
+            entry = MarketInfo(sym, MODE_BID);
+            if (tradeType == OP_BUY) {
+               tradeType = OP_BUYLIMIT;
+            } else if (tradeType == OP_SELL) {
+               tradeType = OP_SELLLIMIT;
+            }
+         }
+         
+         if (optimize == 2) {
+            double spread = MarketInfo(sym, MODE_SPREAD);
+            
+            if (tradeType == OP_BUY) {
+               TP = TP - spread * MarketInfo(sym, MODE_POINT);
+               //SL = SL - spread * MarketInfo(sym, MODE_POINT);
+            } else if (tradeType == OP_SELL) {
+               TP = TP + spread * MarketInfo(sym, MODE_POINT);
+               SL = SL + spread * MarketInfo(sym, MODE_POINT);
+            }
          }
       }
       OrderSend(sym, tradeType, lot, entry, slippage, SL, TP, commentOrder, magic, 0, tradeColor);    
@@ -286,7 +319,8 @@ void trailingTP(string sym)
 {
    double upper = upperDonchianChannelsTrailingStop;
    double lower = lowerDonchianChannelsTrailingStop;
-   double newTP = 0;      
+   double newTP = 0;
+   double spread = MarketInfo(sym, MODE_SPREAD);      
       
 	for (int i = OrdersTotal() - 1; i >= 0; i--) {
 		if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
@@ -297,17 +331,25 @@ void trailingTP(string sym)
 		      newTP = -1;
 		   }
 			if ((OrderType() == OP_BUY)) {
-			   newTP = upper;			   
+			   newTP = upper;		
+			   if (optimize == 2) {
+			      newTP = newTP - spread * MarketInfo(sym, MODE_POINT);
+			   }	   
 			   if (newTP >= orderTP) {
 			      return;
 			   }
+			   
 				OrderModify(OrderTicket(), OrderOpenPrice(), OrderStopLoss(), newTP, OrderExpiration(), clrNONE);
 
 			} else if ((OrderType() == OP_SELL)) {            
             newTP = lower;		
+            if (optimize == 2) {
+			      newTP = newTP + spread * MarketInfo(sym, MODE_POINT);
+			   }
 			   if (newTP <= orderTP) {
 			      return;
 			   }
+			   
             OrderModify(OrderTicket(), OrderOpenPrice(),OrderStopLoss(), newTP, OrderExpiration(), clrNONE);
 			}
 		}
@@ -517,5 +559,50 @@ void closeAll(string sym)
    }
 }
 
+void checkCancel(string sym) 
+{
+   if (optimize == 1) {
+   double bidPrice = MarketInfo(sym, MODE_BID);
+      for(int i = OrdersTotal() - 1; i >= 0; i--) {
+         if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+            if (OrderType() == OP_BUYLIMIT && bidPrice >= OrderTakeProfit()) {
+               OrderDelete(OrderTicket());
+            } else if (OrderType() == OP_SELLLIMIT && bidPrice <= OrderTakeProfit()) {
+               OrderDelete(OrderTicket());
+            }            
+         }
+      }
+   }
+}
+
+int checkIchimokuAndCandle(string sym)
+{
+   int tradeType = - 1;
+
+   double tenKanSen = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_TENKANSEN, 1);
+   double kiJunSen = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_KIJUNSEN, 1);
+   double senKouSpanA = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_SENKOUSPANA, 1);
+   double senKouSpanB = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_SENKOUSPANB, 1);
+   double chiKouSpan = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_CHIKOUSPAN, 27);
+   double senKouSpanAFuture = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_SENKOUSPANA, -25);
+   double senKouSpanBFuture = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_SENKOUSPANB, -25);
+   double senKouSpanAPast = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_SENKOUSPANA, 27);
+   double senKouSpanBPast = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_SENKOUSPANB, 27);
+   
+   double openPrice = iOpen(sym, ichiTrendTimeframe, 1);
+   double closePrice = iClose(sym, ichiTrendTimeframe, 1);
+   
+   if (
+      openPrice > senKouSpanA && closePrice > senKouSpanB && tenKanSen > kiJunSen
+   ) {
+      tradeType = OP_BUY;
+   } else if (
+      openPrice < senKouSpanA && closePrice < senKouSpanB && tenKanSen < kiJunSen
+   ) {
+      tradeType = OP_SELL;
+   }
+   
+   return (tradeType);
+}
 
 

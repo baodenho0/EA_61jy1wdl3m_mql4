@@ -15,7 +15,7 @@ extern string Fx_Sniper_CCI_T3_New = "Fx_Sniper_CCI_T3_New";
 ENUM_TIMEFRAMES timeframe = PERIOD_CURRENT;
 int slippage = 1;
 datetime tradeTime;
-extern double lots = 0.04;
+extern double lots = 0.02;
 extern double dailyDrawdown = 0.03;
 extern double limitMaxDrawdown = 8800;
 string globalRandom = "_j7a2zwqfp4_FXST3CCI";
@@ -33,7 +33,9 @@ extern int consecutiveWins = 2;
 int forceStopTradeType = -1;
 extern double closeProfit = 10;
 extern int trailingPoints = 20;
-extern int bigWave = 130;
+int bigWave = 130;
+extern string ichiTrend = "------ichiTrend-------";
+extern ENUM_TIMEFRAMES ichiTrendTimeframe = PERIOD_M5;
 
 string tmpDes = ""; //------Setup Fx_Sniper_CCI_T3_New------- 13,13,0.3,3,100
 int v1 = 13;//------Setup Fx_Sniper_CCI_T3_New------- 13,13,0.3,3,100
@@ -154,7 +156,11 @@ void checkRun(string sym)
       closeType = OP_SELL;
    } else if (tradeType == OP_SELL) {
       closeType = OP_BUY;
-   }   
+   }  
+   
+   if (OrdersTotal() == 0 && tradeType != checkIchimokuAndCandle(sym)) {
+      return;
+   }
    
    if (AccountProfit() > 0 && closeProfit == 0) {
       closeTradingByTradeType(sym, closeType);      
@@ -176,13 +182,13 @@ void checkRun(string sym)
          return;
    }
    */
-   
+   /*
    if ((checkBigWave(sym) || forceStopTradeType == tradeType)) {
          forceStopTradeType = tradeType;
          closeAll(sym);        
          return;
    }
-   
+   */
    
    
    
@@ -636,12 +642,12 @@ void forceCloseAll(string sym, int force = false)
    
    int orderTotal = OrdersTotal();
    double accountProfit = AccountProfit();
-   if (OrdersTotal() >= maxTotalOrder && AccountEquity() <= (AccountBalance() - (AccountBalance() * maxLoss))
+   if (//OrdersTotal() >= maxTotalOrder && AccountEquity() <= (AccountBalance() - (AccountBalance() * maxLoss))
       //|| Hour() >= 21 && Hour() <= 24 && AccountProfit() >= 0
-      || (Hour() >= 22 && Hour() <= 24 && AccountEquity() <= (AccountBalance() - (AccountBalance() * maxLoss)))
-      || OrdersTotal() > 5 && AccountProfit() >= 0
-      || OrdersTotal() > 5 //&& AccountProfit() >= 0
-      || AccountEquity() <= getLimitDayDrawdown()
+      //|| (Hour() >= 22 && Hour() <= 24 && AccountEquity() <= (AccountBalance() - (AccountBalance() * maxLoss)))
+      //|| OrdersTotal() > 5 && AccountProfit() >= 0
+      //|| OrdersTotal() > 5 //&& AccountProfit() >= 0
+      AccountEquity() <= getLimitDayDrawdown()
       //|| Hour() >= 23 && Hour() <= 24
       //|| AccountProfit() >= (AccountBalance() * TP)
       //|| AccountEquity() <= (AccountBalance() - (AccountBalance() * dailyDrawdown))
@@ -653,7 +659,16 @@ void forceCloseAll(string sym, int force = false)
       if (accountProfit < 0) {
          arrayPush(arrCountForceCloseAll, orderTotal);
       }      
-   }   
+   }
+   
+   if ((AccountProfit() >= 0 && checkIchimokuAndCandle(sym) == -1)
+      //|| (checkIchimokuAndCandle(sym) != -1 && checkIchimokuAndCandle(sym) != getLastTradeType(sym))
+   ) {
+      closeAll(sym);      
+      if (accountProfit < 0) {
+         arrayPush(arrCountForceCloseAll, orderTotal);
+      }      
+   }        
 }
 
 double getSLByPips(string sym, int tradeType, double entry)
@@ -853,4 +868,34 @@ bool checkEntry(string sym, double entry, int tradeType)
    }
     
    return result;
+}
+
+int checkIchimokuAndCandle(string sym)
+{
+   int tradeType = - 1;
+
+   double tenKanSen = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_TENKANSEN, 1);
+   double kiJunSen = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_KIJUNSEN, 1);
+   double senKouSpanA = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_SENKOUSPANA, 1);
+   double senKouSpanB = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_SENKOUSPANB, 1);
+   double chiKouSpan = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_CHIKOUSPAN, 27);
+   double senKouSpanAFuture = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_SENKOUSPANA, -25);
+   double senKouSpanBFuture = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_SENKOUSPANB, -25);
+   double senKouSpanAPast = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_SENKOUSPANA, 27);
+   double senKouSpanBPast = iIchimoku(sym, ichiTrendTimeframe, 9, 26, 52, MODE_SENKOUSPANB, 27);
+   
+   double openPrice = iOpen(sym, ichiTrendTimeframe, 1);
+   double closePrice = iClose(sym, ichiTrendTimeframe, 1);
+   
+   if (
+      openPrice > senKouSpanA && closePrice > senKouSpanB && tenKanSen > kiJunSen
+   ) {
+      tradeType = OP_BUY;
+   } else if (
+      openPrice < senKouSpanA && closePrice < senKouSpanB && tenKanSen < kiJunSen
+   ) {
+      tradeType = OP_SELL;
+   }
+   
+   return (tradeType);
 }

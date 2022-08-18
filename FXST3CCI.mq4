@@ -32,10 +32,11 @@ extern double xLot1 = 2.1;
 extern int consecutiveWins = 2;
 int forceStopTradeType = -1;
 extern double closeProfit = 10;
-extern int trailingPoints = 20;
+int trailingPoints = 20;
 int bigWave = 130;
-extern string ichiTrend = "------ichiTrend-------";
-extern ENUM_TIMEFRAMES ichiTrendTimeframe = PERIOD_M5;
+//extern string ichiTrend = "------ichiTrend-------";
+ENUM_TIMEFRAMES ichiTrendTimeframe = PERIOD_CURRENT;
+extern string ChandelierExit = "ChandelierExit";
 
 string tmpDes = ""; //------Setup Fx_Sniper_CCI_T3_New------- 13,13,0.3,3,100
 int v1 = 13;//------Setup Fx_Sniper_CCI_T3_New------- 13,13,0.3,3,100
@@ -156,9 +157,33 @@ void checkRun(string sym)
       closeType = OP_SELL;
    } else if (tradeType == OP_SELL) {
       closeType = OP_BUY;
-   }  
+   } 
+   
    
    if (OrdersTotal() == 0 && tradeType != checkIchimokuAndCandle(sym)) {
+      return;
+   }
+   
+   
+   /*
+   if (OrdersTotal() == 0 && tradeType != checkIchimokuAndCandleX5(sym)) {
+      return;
+   }
+   */
+   
+   if (OrdersTotal() == 0 && tradeType != checkMA200(sym)) {
+      return;
+   }
+   
+   if (OrdersTotal() == 0 && tradeType != checkChandelierExitX5(sym)) {
+      return;
+   }
+   
+   if (OrdersTotal() == 0 && tradeType != checkChandelierExitX15(sym)) {
+      return;
+   }
+   
+   if (OrdersTotal() == 0 && tradeType != checkChandelierExitX30(sym)) {
       return;
    }
    
@@ -207,9 +232,9 @@ int checkFx_Sniper_CCI_T3_New(string sym)
    
    //Alert("up: " + up + " up1: " + up1 + " | down: " + down + " down1: " + down1);
    
-   if ((down > 0 && down < 500) || (down1 > 0 && down1 < 500)) {
+   if ((OrdersTotal() > 0 && (down > 0 && down < 500)) || (down1 > 0 && down1 < 500)) {
       tradeType = OP_SELL;
-   } else if ((up < 0 && up > -500) || (up1 < 0 && up1 > -500)) {
+   } else if ((OrdersTotal() > 0 && (up < 0 && up > -500)) || (up1 < 0 && up1 > -500)) {
       tradeType= OP_BUY;
    }
    
@@ -661,14 +686,16 @@ void forceCloseAll(string sym, int force = false)
       }      
    }
    
-   if ((AccountProfit() >= 0 && checkIchimokuAndCandle(sym) == -1)
-      //|| (checkIchimokuAndCandle(sym) != -1 && checkIchimokuAndCandle(sym) != getLastTradeType(sym))
+   if (
+      (checkChandelierExitX15(sym) != -1 && checkChandelierExitX15(sym) != getLastTradeType(sym)) && AccountProfit() >= 0
    ) {
       closeAll(sym);      
       if (accountProfit < 0) {
          arrayPush(arrCountForceCloseAll, orderTotal);
       }      
-   }        
+   } 
+    
+        
 }
 
 double getSLByPips(string sym, int tradeType, double entry)
@@ -817,10 +844,10 @@ void checkCloseProfit(string sym)
 {
    int ordersTotal = OrdersTotal();
    if (AccountProfit() >= closeProfit) {
-      //closeAll(sym);
-      trailingStop(trailingPoints);
+      closeAll(sym);
+      //trailingStop(trailingPoints);
       //setCountConsecutiveWins(getCountConsecutiveWins() + 1);
-      //saveRP(ordersTotal);   
+      saveRP(ordersTotal);   
    }
 }
 
@@ -835,7 +862,7 @@ void trailingStop(int TrailingOffsetPoints)
 		      orderStopLoss = 9999;
 		   }
 			if ((OrderType() == OP_BUY) && (NormPrice(Bid - orderStopLoss) > NormPrice(TrailingOffsetPoints * Point))) {
-			   Alert(NormPrice(Bid - TrailingOffsetPoints * Point) +"-"+ orderStopLoss);
+			   //Alert(NormPrice(Bid - TrailingOffsetPoints * Point) +"-"+ orderStopLoss);
 			   if (NormPrice(Bid - TrailingOffsetPoints * Point) <= orderStopLoss) {
 			      return;
 			   }
@@ -888,14 +915,141 @@ int checkIchimokuAndCandle(string sym)
    double closePrice = iClose(sym, ichiTrendTimeframe, 1);
    
    if (
-      openPrice > senKouSpanA && closePrice > senKouSpanB && tenKanSen > kiJunSen
+      senKouSpanAFuture > senKouSpanBFuture
    ) {
       tradeType = OP_BUY;
    } else if (
-      openPrice < senKouSpanA && closePrice < senKouSpanB && tenKanSen < kiJunSen
+      senKouSpanAFuture < senKouSpanBFuture
+   ) {
+      tradeType = OP_SELL;
+   }
+   //Alert("openPrice: " + openPrice +" < senKouSpanA: "+  senKouSpanA + " && closePrice: " + closePrice + " < senKouSpanB: " + senKouSpanB + " && tenKanSen: " +  tenKanSen + " < kiJunSen: " + kiJunSen);
+   
+   return (tradeType);
+}
+
+int checkIchimokuAndCandleX5(string sym)
+{
+   int tradeType = - 1;
+   
+   double tenKanSen = iIchimoku(sym, timeframe, 45, 130, 260, MODE_TENKANSEN, 1);
+   double kiJunSen = iIchimoku(sym, timeframe, 45, 130, 260, MODE_KIJUNSEN, 1);
+   double senKouSpanA = iIchimoku(sym, timeframe, 45, 130, 260, MODE_SENKOUSPANA, 1);
+   double senKouSpanB = iIchimoku(sym, timeframe, 45, 130, 260, MODE_SENKOUSPANB, 1);
+   double chiKouSpan = iIchimoku(sym, timeframe, 45, 130, 260, MODE_CHIKOUSPAN, 132);
+   double senKouSpanAFuture = iIchimoku(sym, timeframe, 45, 130, 260, MODE_SENKOUSPANA, -129);
+   double senKouSpanBFuture = iIchimoku(sym, timeframe, 45, 130, 260, MODE_SENKOUSPANB, -129);
+   double senKouSpanAPast = iIchimoku(sym, timeframe, 45, 130, 260, MODE_SENKOUSPANA, 132);
+   double senKouSpanBPast = iIchimoku(sym, timeframe, 45, 130, 260, MODE_SENKOUSPANB, 132);
+   
+   //double senKouSpanAFuture = iIchimoku(sym, timeframe, 9, 26, 52, MODE_SENKOUSPANA, -25);
+   //double senKouSpanBFuture = iIchimoku(sym, timeframe, 9, 26, 52, MODE_SENKOUSPANB, -25);
+   
+   double openPrice = iOpen(sym, timeframe, 1);
+   double closePrice = iClose(sym, timeframe, 1);
+   
+   if (
+      openPrice > senKouSpanA && closePrice > senKouSpanB
+   ) {
+      tradeType = OP_BUY;
+   } else if (
+      openPrice < senKouSpanA && closePrice < senKouSpanB
    ) {
       tradeType = OP_SELL;
    }
    
-   return (tradeType);
+   return tradeType;
 }
+
+int checkMA200(string sym)
+{
+   int tradeType = - 1;
+   
+   double ma200 = iMA(sym,timeframe,200,0,MODE_EMA,PRICE_CLOSE,1);
+   double openPrice = iOpen(sym, timeframe, 1);
+   double closePrice = iClose(sym, timeframe, 1);
+   
+   if (
+      openPrice > ma200 && closePrice > ma200
+   ) {
+      tradeType = OP_BUY;
+   } else if (
+      openPrice < ma200 && closePrice < ma200
+   ) {
+      tradeType = OP_SELL;
+   }
+   
+   return tradeType;
+}
+
+int checkChandelierExitX5(string sym)
+{
+   int tradeType = -1;
+   double lower = iCustom(sym, timeframe, ChandelierExit,7,0,9,12.5, 0, 1);
+   double upper = iCustom(sym, timeframe, ChandelierExit,7,0,9,12.5, 1, 1);
+   
+   double lower2 = iCustom(sym, timeframe, ChandelierExit,7,0,9,12.5, 0, 2);
+   double upper2 = iCustom(sym, timeframe, ChandelierExit,7,0,9,12.5, 1, 2);
+      
+   if (upper > 0 && upper < 999999) {
+      tradeType = OP_SELL;
+   } else if (lower > 0 && lower < 999999) {
+      tradeType = OP_BUY;
+   } 
+   
+   return tradeType;
+}
+
+int checkChandelierExitX15(string sym)
+{
+   int tradeType = -1;
+   double lower = iCustom(sym, timeframe, ChandelierExit,7,0,9,37.5, 0, 1);
+   double upper = iCustom(sym, timeframe, ChandelierExit,7,0,9,37.5, 1, 1);
+   
+   double lower2 = iCustom(sym, timeframe, ChandelierExit,7,0,9,37.5, 0, 2);
+   double upper2 = iCustom(sym, timeframe, ChandelierExit,7,0,9,37.5, 1, 2);
+      
+   if (upper > 0 && upper < 999999) {
+      tradeType = OP_SELL;
+   } else if (lower > 0 && lower < 999999) {
+      tradeType = OP_BUY;
+   } 
+   
+   return tradeType;
+}
+
+int checkChandelierExitX30(string sym)
+{
+   int tradeType = -1;
+   double lower = iCustom(sym, timeframe, ChandelierExit,7,0,9,75, 0, 1);
+   double upper = iCustom(sym, timeframe, ChandelierExit,7,0,9,75, 1, 1);
+   
+   double lower2 = iCustom(sym, timeframe, ChandelierExit,7,0,9,75, 0, 2);
+   double upper2 = iCustom(sym, timeframe, ChandelierExit,7,0,9,75, 1, 2);
+      
+   if (upper > 0 && upper < 999999) {
+      tradeType = OP_SELL;
+   } else if (lower > 0 && lower < 999999) {
+      tradeType = OP_BUY;
+   } 
+   
+   return tradeType;
+}
+
+bool checkStockastic(string sym)
+{
+   bool result = false;
+
+   double k = iStochastic(sym, timeframe, 25, 15, 15, MODE_SMA, 0, MODE_MAIN, 1);
+   double d = iStochastic(sym, timeframe, 25, 15, 15, MODE_SMA, 0, MODE_SIGNAL, 1); 
+   
+   k = NormalizeDouble(k, MarketInfo(sym, MODE_DIGITS));
+   d = NormalizeDouble(d, MarketInfo(sym, MODE_DIGITS));
+   
+   if(k < 80 && d < 80 && k > 30 && d > 30) {
+      result = true;
+   }
+   
+   return result;
+}
+

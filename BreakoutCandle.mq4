@@ -11,7 +11,7 @@
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int magic = 991212;
-ENUM_TIMEFRAMES timeframe = PERIOD_CURRENT;
+extern ENUM_TIMEFRAMES timeframe = PERIOD_D1;
 int slippage = 1;
 datetime tradeTime;
 extern double risk = 0.5; // risk (0.5%)
@@ -23,7 +23,7 @@ extern int SLpoints = 50;
 int TPpoints = 0;
 int TPprice = 9999999;
 int forceStopTradeType = -1;
-int trailingPoints = 50;
+extern int trailingPoints = 50;
 int arrCountForceCloseAll[];
 double breakEven = 99999;
 
@@ -53,17 +53,18 @@ void OnDeinit(const int reason)
 void OnTick()
   {      
       string sym = Symbol();
+      trailingStop(trailingPoints);
       forceCloseAll(sym);
       drawButton(sym);
-      calculateDrawdown();
-      trailingStop(trailingPoints);// Alert(iTime(sym, timeframe, 0));
-      if(tradeTime == iTime(sym, timeframe, 0)) {
-         return;
-      }      
-      tradeTime = iTime(sym, 0, 0);
+      calculateDrawdown();      
       
-      checkCancel(sym);      
-      checkRun(sym);   
+      if(tradeTime != iTime(sym, timeframe, 0)) {   
+           
+         checkCancel(sym);      
+         checkRun(sym);  
+                
+         tradeTime = iTime(sym, timeframe, 0);
+      }
   }
 //+------------------------------------------------------------------+
 
@@ -84,8 +85,6 @@ void runTrading(string sym, int tradeType, double entry = 0, double lot = 0)
 {
    if (/*Hour() <= 1 || Hour() >= 23 ||*/ 
          getAllowTrade() == 1 
-      //|| (getAllowBuyStop() == 1 && tradeType == OP_BUYSTOP) 
-      //|| (getAllowSellStop() == 1 && tradeType == OP_SELLSTOP)
    ) {
          return;
    }
@@ -623,17 +622,18 @@ void trailingStop(int TrailingOffsetPoints)
 		   } else if (orderStopLoss == 0 && (OrderType() == OP_SELL)) {
 		      orderStopLoss = 9999;
 		   }
-			if ((OrderType() == OP_BUY) && (NormPrice(Bid - orderStopLoss) > NormPrice(TrailingOffsetPoints * Point))) {
-			   //Alert(NormPrice(Bid - TrailingOffsetPoints * Point) +"-"+ orderStopLoss);
+			if (OrderType() == OP_BUY) {			   
 			   if (NormPrice(Bid - TrailingOffsetPoints * Point) <= orderStopLoss) {
 			      return;
 			   }
+			   Alert("trli BUY: " + NormPrice(Bid - TrailingOffsetPoints * Point));
 				OrderModify(OrderTicket(), OrderOpenPrice(), NormPrice(Bid - TrailingOffsetPoints * Point), OrderTakeProfit(), OrderExpiration(), clrNONE);
 
-			} else if ((OrderType() == OP_SELL) && (NormPrice(orderStopLoss - Ask) > NormPrice(TrailingOffsetPoints * Point))) {
+			} else if (OrderType() == OP_SELL) {			   
             if (NormPrice(Ask + TrailingOffsetPoints * Point) >= orderStopLoss) {
 			      return;
 			   }
+			   Alert("trli SELL: " + NormPrice(Ask + TrailingOffsetPoints * Point));
             OrderModify(OrderTicket(), OrderOpenPrice(), NormPrice(Ask + TrailingOffsetPoints * Point), OrderTakeProfit(), OrderExpiration(), clrNONE);
 			}
 		}

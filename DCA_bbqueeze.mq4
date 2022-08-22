@@ -25,10 +25,10 @@ int TPpoints = 0;
 int TPprice = 9999999;
 extern int maxTotalOrder = 30;
 extern double maxLoss = 0.011;
-extern int totalXLot = 5;
-extern double xLot = 2.1;
-extern int totalXLot1 = 6;
-extern double xLot1 = 2.1;
+extern int totalXLot = 10;
+extern double xLot = 3;
+extern int totalXLot1 = 19;
+extern double xLot1 = 4;
 //extern int maxLossPoints = 2900;
 extern int consecutiveWins = 2;
 int forceStopTradeType = -1;
@@ -38,6 +38,9 @@ int bigWave = 130;
 //extern string ichiTrend = "------ichiTrend-------";
 ENUM_TIMEFRAMES ichiTrendTimeframe = PERIOD_CURRENT;
 int only = OP_SELL;
+double totalLots = 0;
+extern int useHedgeTotal = 20;
+extern double xHedge = 3;
 
 
 string tmpDes = ""; //------Setup Fx_Sniper_CCI_T3_New------- 13,13,0.3,3,100
@@ -72,6 +75,11 @@ int a22 = 0;
 int a23 = 0;
 int a24 = 0;
 int a25 = 0;
+int a26 = 0;
+int a27 = 0;
+int a28 = 0;
+int a29 = 0;
+int a30 = 0;
 int arrCountForceCloseAll[];
 
 int OnInit()
@@ -116,11 +124,16 @@ void OnDeinit(const int reason)
       Alert("18: " + a18);
       Alert("19: " + a19);
       Alert("20: " + a20);
-      Alert("21: " + a11);
-      Alert("22: " + a12);
-      Alert("23: " + a13);
-      Alert("24: " + a14);
+      Alert("21: " + a21);
+      Alert("22: " + a22);
+      Alert("23: " + a23);
+      Alert("24: " + a24);
       Alert("25: " + a25);
+      Alert("26: " + a26);
+      Alert("27: " + a27);
+      Alert("28: " + a28);
+      Alert("29: " + a29);
+      Alert("30: " + a30);
       Alert("=======");
       Alert("arrCountForceCloseAll: " + ArraySize(arrCountForceCloseAll));
       
@@ -153,7 +166,7 @@ void checkRun(string sym)
    int lastTradeType = -1;
    
    int checkBbsqueezeaverages = checkBbsqueezeaverages(sym);
-   tradeType = checkBbsqueezeaverages; //Alert("tradeType: " + tradeType);  
+   tradeType = checkBbsqueezeaverages; Alert("tradeType: " + tradeType);  
    
    if (tradeType == OP_BUY) {
       closeType = OP_SELL;
@@ -166,18 +179,17 @@ void checkRun(string sym)
    if (tradeType == -1) {
       return;
    }
-   /*
-   if (getOrdersTotal(sym, closeType) == 0 && tradeType != checkChandelierExitX5(sym)) {
+   
+   if (tradeType == OP_BUY && tradeType != checkChandelierExitX15(sym)) {
       return;
    }
-   */
    
    runTrading(sym, tradeType);
 }
 
 void runTrading(string sym, int tradeType, double lot = 0) 
 {
-   if (Hour() <= 1 || Hour() >= 23 || getAllowTrade() == 1 /*|| only != tradeType*/) {
+   if (Hour() <= 1 || Hour() >= 23 || getAllowTrade() == 1 || (only != tradeType && OrdersTotal() <= useHedgeTotal)) {
          return;
    }
       
@@ -220,6 +232,7 @@ void runTrading(string sym, int tradeType, double lot = 0)
       string commentOrder = "";
 
       OrderSend(sym, tradeType, lot, entry, slippage, SL, TP, commentOrder, magic, 0, tradeColor);      
+      totalLots = totalLots + lot;
    }
 }
 
@@ -287,6 +300,17 @@ double getLot(string sym, int tradeType)
   if (getOrdersTotal(sym, tradeType) > totalXLot1) {
       tmpLots = tmpLots * xLot1;
   }
+  
+  if (getOrdersTotal(sym, OP_SELL) >= useHedgeTotal && tradeType == OP_BUY) {
+     tmpLots = totalLots * xHedge;
+  }
+  
+  double lotstep = MarketInfo(sym,MODE_LOTSTEP);
+  double maxLot = (AccountFreeMargin())/MarketInfo(sym,MODE_MARGINREQUIRED);
+  maxLot = DoubleToStr(MathFloor(maxLot/lotstep)*lotstep,2); 
+  if (tmpLots > maxLot) {
+      tmpLots = maxLot;
+  }
 
   return tmpLots;
       
@@ -352,6 +376,12 @@ void drawButton(string sym)
    long currentChartId = ChartID();  
    
    double spread = MarketInfo(sym, MODE_SPREAD);
+   
+   ObjectCreate(currentChartId, "totalLots", OBJ_LABEL, 0, 0 ,0);
+   ObjectSet("totalLots", OBJPROP_CORNER, CORNER_RIGHT_UPPER);
+   ObjectSet("totalLots", OBJPROP_XDISTANCE, 50);
+   ObjectSet("totalLots", OBJPROP_YDISTANCE, 120);
+   ObjectSetText("totalLots", "Lots: " + totalLots, 15, "Impact", Red);
    
    ObjectCreate(currentChartId, "showSpread", OBJ_LABEL, 0, 0 ,0);   
    ObjectSet("showSpread", OBJPROP_CORNER, CORNER_RIGHT_UPPER);
@@ -731,6 +761,26 @@ void saveRP(int ordersTotal)
       a19 = a19 + 1;
    }if (ordersTotal == 20) {
       a20 = a20 + 1;
+   }if (ordersTotal == 21) {
+      a16 = a21 + 1;
+   }if (ordersTotal == 22) {
+     a17 = a22 + 1;
+   }if (ordersTotal == 23) {
+      a18 = a23 + 1;
+   }if (ordersTotal == 24) {
+      a19 = a24 + 1;
+   }if (ordersTotal == 25) {
+      a20 = a25 + 1;
+   }if (ordersTotal == 26) {
+      a16 = a26 + 1;
+   }if (ordersTotal == 27) {
+     a17 = a27 + 1;
+   }if (ordersTotal == 28) {
+      a18 = a28 + 1;
+   }if (ordersTotal == 29) {
+      a19 = a29 + 1;
+   }if (ordersTotal == 30) {
+      a20 = a30 + 1;
    }
 }
 
@@ -953,6 +1003,24 @@ int checkChandelierExitX5(string sym)
    
    double lower2 = iCustom(sym, timeframe, ChandelierExit,7,0,9,12.5, 0, 2);
    double upper2 = iCustom(sym, timeframe, ChandelierExit,7,0,9,12.5, 1, 2);
+      
+   if (upper > 0 && upper < 999999) {
+      tradeType = OP_SELL;
+   } else if (lower > 0 && lower < 999999) {
+      tradeType = OP_BUY;
+   } 
+   
+   return tradeType;
+}
+
+int checkChandelierExitX15(string sym)
+{
+   int tradeType = -1;
+   double lower = iCustom(sym, timeframe, ChandelierExit,7,0,9,37.5, 0, 1);
+   double upper = iCustom(sym, timeframe, ChandelierExit,7,0,9,37.5, 1, 1);
+   
+   double lower2 = iCustom(sym, timeframe, ChandelierExit,7,0,9,37.5, 0, 2);
+   double upper2 = iCustom(sym, timeframe, ChandelierExit,7,0,9,37.5, 1, 2);
       
    if (upper > 0 && upper < 999999) {
       tradeType = OP_SELL;

@@ -18,7 +18,7 @@ extern double limitMaxDrawdown = 8800;
 string globalRandom = "_fsdp4_mobat";
 int magic = 92122;
 int minSL = 30; //minSL(points)
-extern double risk = 0.5; //risk(0.5%)
+extern double risk = 1.5; //risk(0.5%)
 extern double reward = 10;
 double totalLots = 0;
 bool swap = false;
@@ -33,6 +33,7 @@ double EntryGlobal = 0;
 extern int useEMA20 = 20;
 extern int closingHalfTrade = 0;
 extern int breakEven = 1;
+extern int ordersTotal = 6;
 
 int OnInit()
   {
@@ -119,7 +120,7 @@ void checkRun(string sym)
 
 void runTrading(string sym, int tradeType, double lot = 0) 
 {
-   if (Hour() < 1 || Hour() >= 23 || getAllowTrade() == 1 || getTmpAllowTrade() == 1 || OrdersTotal() >= 1) {
+   if (Hour() < 1 || Hour() >= 23 || getAllowTrade() == 1 || getTmpAllowTrade() == 1 || OrdersTotal() >= ordersTotal) {
          return;
    }
       

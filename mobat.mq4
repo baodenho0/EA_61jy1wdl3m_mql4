@@ -19,20 +19,20 @@ string globalRandom = "_fsdp4_mobat";
 int magic = 92122;
 int minSL = 30; //minSL(points)
 extern double risk = 0.5; //risk(0.5%)
-extern double reward = 4;
+extern double reward = 10;
 double totalLots = 0;
 bool swap = false;
 int optimize = 0;
 int countCancel = 0;
 int deviant = 0;//deviant(points)
 int forceStopTradeType = -1;
-extern int setRange = 7; //range 5 candles
+extern int setRange = 13; //range 5 candles
 extern int setCheckRange = 2; //check range 5 candles
 double SLglobal = 0;
 double EntryGlobal = 0;
 extern int useEMA20 = 20;
-extern int closingHalfTrade = 1;
-extern int breakEven = 0;
+extern int closingHalfTrade = 0;
+extern int breakEven = 1;
 
 int OnInit()
   {
